@@ -89,6 +89,7 @@ type
     btnGetSamples: TButton;
     btnMemOver: TButton;
     btnWindowOffset: TButton;
+    cbOutputType: TCheckBox;
     procedure FormCreate(Sender: TObject);
     procedure btnGetDataFromCounterClick(Sender: TObject);
     procedure btnSaveRawClick(Sender: TObject);
@@ -103,6 +104,7 @@ type
     procedure btnGetSamplesClick(Sender: TObject);
     procedure btnMemOverClick(Sender: TObject);
     procedure btnWindowOffsetClick(Sender: TObject);
+    procedure Button1Click(Sender: TObject);
   private
     { Private declarations }
   public
@@ -120,6 +122,11 @@ const
   CHANEL_AMOUNT = 3;
   HYS_IRF_LENGTH = 1000;
   QELIZABETH_MAX = ONE_TIME_SAMPLES * N_MAX; //(1000) myltiply N_MAX(max amount of packages (2047 structures in 1 package))
+type
+  TCustomBinary = record
+    channel : word;
+    bin  : Int64;
+  end;
 var
   Form1: TForm1;
    hystReady, connectionFlag:Boolean;
@@ -370,6 +377,18 @@ var  Time :array [0..256] of Double;
         i:=i+1;
     end;
   end;
+
+procedure generateAndSaveData;
+var tempBuffer: TCustomBinary;
+    f: File of TCustomBinary;
+    i: Integer;
+beign
+  i:=0;
+  while i<=nextFreeSlot do
+  begin
+    
+  end;
+end;
 
 procedure getCalibration(ch:Byte);
 var counter,i, sum, rightBorderHyst, leftBorderHyst,halfWidth  :Integer;
@@ -647,19 +666,19 @@ getHyst;
 end;
 
 procedure TForm1.btnSaveDecodedDataToFileClick(Sender: TObject);
-var f: TextFile;
+var textFile: TextFile;
   i: Cardinal;
 begin
 if ( not dlgSaveRawData.Execute ) then Exit;
-AssignFile(f, dlgSaveRawData.FileName);
-Rewrite(f);
-i:=0;
-while i<nextFreeSlot do
-begin
-  Writeln(f,qElizabeth[i].chanel:3,' ',qElizabeth[i].ADC:4,' ',qElizabeth[i].counter);
-  i:=i+1;
-end;
-closeFile(f);
+  AssignFile(textFile, dlgSaveRawData.FileName);
+  Rewrite(textFile);
+  i:=0;
+  while i<nextFreeSlot do
+  begin
+    Writeln(textFile,qElizabeth[i].chanel:3,' ',qElizabeth[i].ADC:4,' ',qElizabeth[i].counter);
+    i:=i+1;
+  end;
+  closeFile(textFile);
 end;
 
 procedure TForm1.btnSvHystClick(Sender: TObject);

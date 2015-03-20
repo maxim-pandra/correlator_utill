@@ -1,10 +1,10 @@
 object Form1: TForm1
   Left = 192
   Top = 124
-  Width = 624
+  Width = 860
   Height = 267
   VertScrollBar.Range = 241
-  HorzScrollBar.Range = 601
+  HorzScrollBar.Range = 725
   ActiveControl = btnGetDataFromCounter
   Caption = 'Form1'
   Color = clBackground
@@ -181,6 +181,14 @@ object Form1: TForm1
     Caption = 'btnWindowOffset'
     TabOrder = 19
     OnClick = btnWindowOffsetClick
+  end
+  object cbOutputType: TCheckBox
+    Left = 624
+    Top = 40
+    Width = 101
+    Height = 31
+    Caption = '.txt'
+    TabOrder = 20
   end
   object dlgSaveRawData: TSaveDialog
     FilterIndex = 0
