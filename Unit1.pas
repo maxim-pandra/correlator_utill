@@ -160,7 +160,7 @@ procedure clearAll;
 function setWindowOffset(startCount:Integer; stopCount:Integer): Boolean;
 function setWindowFlag:Boolean;
 function Power(base: Cardinal; power: Cardinal):Cardinal;
-procedure generateAndSaveData( var f : FileOfCustomBinary);
+procedure generateAndSaveData( var f : File);
 procedure generateAndSaveDataText ( var f : TextFile);
 
 implementation
@@ -382,9 +382,12 @@ var  Time :array [0..256] of Double;
     end;
   end;
 
-procedure generateAndSaveData(var f : FileOfCustomBinary);
+procedure generateAndSaveData(var f : File);
 var tempBuffer: TCustomBinary;
-    i: Integer;
+    counter: Int64;
+    chanel: Boolean;
+    byteBuffer: Byte;
+    i,j: Integer;
     analogTime, totalTime: Double;
 begin
   i:=0;
@@ -395,8 +398,18 @@ begin
       analogTime := (origin[qElizabeth[i].chanel]-qElizabeth[i].ADC)*K[qElizabeth[i].chanel]; //got analog time in ns
       totalTime := 12.5*qElizabeth[i].counter + analogTime;
       tempBuffer.bin:=Round(totalTime/0.081);    // time in bins 81ps now
+      byteBuffer:=tempBuffer.bin mod 256;
+      for  j:=1 to 8 do
+      begin
+        blockWrite(f,byteBuffer,1);
+        tempBuffer.bin:=tempBuffer.bin div 256;
+        byteBuffer:= tempBuffer.bin mod 256;
+      end;
       tempBuffer.chanel:=qElizabeth[i].chanel;
-      write(f,tempBuffer);
+      byteBuffer:=tempBuffer.chanel mod 256;
+      blockWrite(f,byteBuffer,1);
+      byteBuffer:=tempBuffer.chanel div 256;
+      blockWrite(f,byteBuffer,1);
     end;
     i:=i+1;
   end;
@@ -845,10 +858,23 @@ setWindowFlag;
 end;
 
 procedure TForm1.btnMakeBinaryClick(Sender: TObject);
-var     fBin: FileOfCustomBinary;
+var     fBin: File;
         fTxt: TextFile;
 
 begin
+  if nextFreeSlot = 0 then
+  begin
+    ShowMessage(' no raw data');
+    Exit;
+  end;
+  if hystReady=False then
+  begin
+    ShowMessage('no hyst in memory');
+    Exit;
+  end;
+  getCalibration(0);
+  getCalibration(1);
+  getCalibration(2);
   if (cbOutputType.Checked = True) then
   begin
     if(not dlgSaveRawData.Execute) then Exit;
@@ -861,7 +887,7 @@ begin
   begin
     if (not dlgSaveRawData.Execute) then Exit;
     AssignFile(fBin,dlgSaveRawData.FileName);
-    Rewrite(fBin);
+    Rewrite(fBin,1);
     generateAndSaveData(fBin);
     CloseFile(fBin);
   end;
