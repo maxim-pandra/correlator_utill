@@ -362,10 +362,10 @@ begin
   if FT_Open(devNum,@FTDevInfo[devNum].DeviceHandle)<>FT_OK then
     exit;
   FTDevConnected[devNum]:=true;
-  if FT_SetDataCharacteristics(FTDevInfo[devNum].DeviceHandle,8,1,0)<>FT_OK then
-    exit;
-  if FT_SetBaudRate(FTDevInfo[devNum].DeviceHandle,FTBaudRate)<>FT_OK then
-    exit;
+//  if FT_SetDataCharacteristics(FTDevInfo[devNum].DeviceHandle,8,1,0)<>FT_OK then
+//    exit;
+//  if FT_SetBaudRate(FTDevInfo[devNum].DeviceHandle,FTBaudRate)<>FT_OK then
+//    exit;
   if FT_SetChars(FTDevInfo[devNum].DeviceHandle,$FE,1,0,0)<>FT_OK then
     exit;
   if FT_Purge(FTDevInfo[devNum].DeviceHandle,3)<>FT_OK then

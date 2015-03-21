@@ -90,6 +90,7 @@ type
     btnMemOver: TButton;
     btnWindowOffset: TButton;
     cbOutputType: TCheckBox;
+    btnMakeBinary: TButton;
     procedure FormCreate(Sender: TObject);
     procedure btnGetDataFromCounterClick(Sender: TObject);
     procedure btnSaveRawClick(Sender: TObject);
@@ -104,7 +105,7 @@ type
     procedure btnGetSamplesClick(Sender: TObject);
     procedure btnMemOverClick(Sender: TObject);
     procedure btnWindowOffsetClick(Sender: TObject);
-    procedure Button1Click(Sender: TObject);
+    procedure btnMakeBinaryClick(Sender: TObject);
   private
     { Private declarations }
   public
@@ -124,9 +125,10 @@ const
   QELIZABETH_MAX = ONE_TIME_SAMPLES * N_MAX; //(1000) myltiply N_MAX(max amount of packages (2047 structures in 1 package))
 type
   TCustomBinary = record
-    channel : word;
+    chanel : word;
     bin  : Int64;
   end;
+  FileOfCustomBinary = File of TCustomBinary;
 var
   Form1: TForm1;
    hystReady, connectionFlag:Boolean;
@@ -158,6 +160,8 @@ procedure clearAll;
 function setWindowOffset(startCount:Integer; stopCount:Integer): Boolean;
 function setWindowFlag:Boolean;
 function Power(base: Cardinal; power: Cardinal):Cardinal;
+procedure generateAndSaveData( var f : FileOfCustomBinary);
+procedure generateAndSaveDataText ( var f : TextFile);
 
 implementation
 
@@ -378,17 +382,46 @@ var  Time :array [0..256] of Double;
     end;
   end;
 
-procedure generateAndSaveData;
+procedure generateAndSaveData(var f : FileOfCustomBinary);
 var tempBuffer: TCustomBinary;
-    f: File of TCustomBinary;
     i: Integer;
-beign
+    analogTime, totalTime: Double;
+begin
   i:=0;
   while i<=nextFreeSlot do
   begin
-    
+    if (origin[qElizabeth[i].chanel] >= qElizabeth[i].adc)and(originEnd[qElizabeth[i].chanel]<= qElizabeth[i].adc) then
+    begin
+      analogTime := (origin[qElizabeth[i].chanel]-qElizabeth[i].ADC)*K[qElizabeth[i].chanel]; //got analog time in ns
+      totalTime := 12.5*qElizabeth[i].counter + analogTime;
+      tempBuffer.bin:=Round(totalTime/0.081);    // time in bins 81ps now
+      tempBuffer.chanel:=qElizabeth[i].chanel;
+      write(f,tempBuffer);
+    end;
+    i:=i+1;
   end;
 end;
+
+procedure generateAndSaveDataText(var f : TextFile);
+var tempBuffer: TCustomBinary;
+    i: Integer;
+    analogTime, totalTime: Double;
+begin
+  i:=0;
+  while i<=nextFreeSlot do
+  begin
+    if (origin[qElizabeth[i].chanel] >= qElizabeth[i].adc)and(originEnd[qElizabeth[i].chanel]<= qElizabeth[i].adc) then
+    begin
+      analogTime := (origin[qElizabeth[i].chanel]-qElizabeth[i].ADC)*K[qElizabeth[i].chanel]; //got analog time in ns
+      totalTime := 12.5*qElizabeth[i].counter + analogTime;
+      tempBuffer.bin:=Round(totalTime/0.081);    // time in bins 81ps now
+      tempBuffer.chanel:=qElizabeth[i].chanel;
+      writeln(f,tempBuffer.chanel,' ',tempBuffer.bin:9);
+    end;
+    i:=i+1;
+  end;
+end;
+
 
 procedure getCalibration(ch:Byte);
 var counter,i, sum, rightBorderHyst, leftBorderHyst,halfWidth  :Integer;
@@ -666,19 +699,20 @@ getHyst;
 end;
 
 procedure TForm1.btnSaveDecodedDataToFileClick(Sender: TObject);
-var textFile: TextFile;
+var
+  fTxt: TextFile;
   i: Cardinal;
 begin
 if ( not dlgSaveRawData.Execute ) then Exit;
-  AssignFile(textFile, dlgSaveRawData.FileName);
-  Rewrite(textFile);
+  AssignFile(fTxt, dlgSaveRawData.FileName);
+  Rewrite(fTxt);
   i:=0;
   while i<nextFreeSlot do
   begin
-    Writeln(textFile,qElizabeth[i].chanel:3,' ',qElizabeth[i].ADC:4,' ',qElizabeth[i].counter);
+    Writeln(fTxt,qElizabeth[i].chanel:3,' ',qElizabeth[i].ADC:4,' ',qElizabeth[i].counter);
     i:=i+1;
   end;
-  closeFile(textFile);
+  closeFile(fTxt);
 end;
 
 procedure TForm1.btnSvHystClick(Sender: TObject);
@@ -808,6 +842,29 @@ if stopOffset div Power(2,16) >0 then
 setWindowOffset(startOffset, stopOffset);
 //включаем режим работы окно
 setWindowFlag;
+end;
+
+procedure TForm1.btnMakeBinaryClick(Sender: TObject);
+var     fBin: FileOfCustomBinary;
+        fTxt: TextFile;
+
+begin
+  if (cbOutputType.Checked = True) then
+  begin
+    if(not dlgSaveRawData.Execute) then Exit;
+    AssignFile(fTxt,dlgSaveRawData.FileName);
+    Rewrite(fTxt);
+    generateAndSaveDataText(fTxt);
+    CloseFile(fTxt);
+  end
+    else
+  begin
+    if (not dlgSaveRawData.Execute) then Exit;
+    AssignFile(fBin,dlgSaveRawData.FileName);
+    Rewrite(fBin);
+    generateAndSaveData(fBin);
+    CloseFile(fBin);
+  end;
 end;
 
 end.
