@@ -99,6 +99,7 @@ type
     loadCalBtn: TButton;
     Label1: TLabel;
     progressTotalBtn: TLabel;
+    OpenDialog: TOpenDialog;
     procedure FormCreate(Sender: TObject);
     procedure btnGetDataFromCounterClick(Sender: TObject);
     procedure btnSaveRawClick(Sender: TObject);
@@ -116,6 +117,7 @@ type
     procedure btnMakeBinaryClick(Sender: TObject);
     procedure saveCalibrationBtnClick(Sender: TObject);
     procedure GoBtnClick(Sender: TObject);
+    procedure loadCalBtnClick(Sender: TObject);
   private
     { Private declarations }
   public
@@ -180,6 +182,7 @@ function pow(power: Integer):int64;
 function checkIfRawDataAvailable():Boolean;
 procedure saveSessionToFile(sessionNumber : Integer);
 procedure clearBram();
+procedure tryToLoadCalibration(custom:Boolean);
 
 implementation
 
@@ -712,6 +715,7 @@ end;
 for i:= 0 to DATA_FROM_COUNTER_MAX do dataFromC[i]:=0;
 connectionFlag:=connectToCounter();
 if (not connectionFlag) then ShowMessage('Faild connection to Counter while starting program');
+tryToLoadCalibration(false);
 end;
 
 procedure testConnection();
@@ -1047,6 +1051,7 @@ begin
 end;
 
 procedure clearBram();
+var ahead: integer;
 begin
   wrIndex:=getCurrWrAddrA;
   if wrIndex>rdIndex then
@@ -1075,6 +1080,44 @@ begin
   end;
   generateAndSaveData(f);
   CloseFile(f);
+end;
+
+
+procedure tryToLoadCalibration(custom:Boolean);
+var f :textFile;
+i:integer;
+begin
+if (custom = true) then
+  if (not OpenDialog.Execute) then Exit;
+  AssignFile(f,OpenDialog.FileName);
+  reset(f);
+  for i:= 0 to 2 do
+  begin
+    readln(f,originEnd[i]);
+    readln(f,origin[i]);
+    readln(f,K[i]);
+  end;
+  close(f);
+else
+  AssignFile(f,'.\calibration.cfg');
+  try
+  reset(f);
+  except
+  showMessage('unable to find calibration.cfg please make sure it is exist');
+  exit;
+  end;
+  for i:= 0 to 2 do
+  begin
+    readln(f,originEnd[i]);
+    readln(f,origin[i]);
+    readln(f,K[i]);
+  end;
+  close(f);
+end;
+
+procedure TForm1.loadCalBtnClick(Sender: TObject);
+begin
+tryToLoadCalibration(true);
 end;
 
 end.

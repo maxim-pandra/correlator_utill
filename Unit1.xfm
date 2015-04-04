@@ -248,6 +248,7 @@ object Form1: TForm1
     Height = 25
     Caption = 'load calibration'
     TabOrder = 27
+    OnClick = loadCalBtnClick
   end
   object Label1: TLabel
     Left = 777
@@ -271,5 +272,12 @@ object Form1: TForm1
     Width = 0
     Left = 64
     Top = 200
+  end
+  object OpenDialog: TOpenDialog
+    FilterIndex = 0
+    Height = 0
+    Width = 0
+    Left = 64
+    Top = 152
   end
 end
