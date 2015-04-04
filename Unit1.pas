@@ -92,6 +92,13 @@ type
     cbOutputType: TCheckBox;
     btnMakeBinary: TButton;
     saveCalibrationBtn: TButton;
+    lengthEdt: TEdit;
+    GoBtn: TButton;
+    progresLb: TLabel;
+    resetBtn: TButton;
+    loadCalBtn: TButton;
+    Label1: TLabel;
+    progressTotalBtn: TLabel;
     procedure FormCreate(Sender: TObject);
     procedure btnGetDataFromCounterClick(Sender: TObject);
     procedure btnSaveRawClick(Sender: TObject);
@@ -108,6 +115,7 @@ type
     procedure btnWindowOffsetClick(Sender: TObject);
     procedure btnMakeBinaryClick(Sender: TObject);
     procedure saveCalibrationBtnClick(Sender: TObject);
+    procedure GoBtnClick(Sender: TObject);
   private
     { Private declarations }
   public
@@ -144,6 +152,7 @@ var
   hyst : array [0..(CHANEL_AMOUNT-1),0..HYST_MAX] of Cardinal;
   rdIndex  :Integer  = 0;
   wrIndex, memOverflowFlag:Integer;
+  globalFilePrefix:String;
 function connectToCounter : Boolean;
 procedure testConnection;
 function getDataFromCounter(initialAddr:Integer = 0; dataBlock:Integer = 16383) : Boolean;
@@ -169,6 +178,8 @@ procedure generateAndSaveData( var f : File);
 procedure generateAndSaveDataText ( var f : TextFile);
 function pow(power: Integer):int64;
 function checkIfRawDataAvailable():Boolean;
+procedure saveSessionToFile(sessionNumber : Integer);
+procedure clearBram();
 
 implementation
 
@@ -303,7 +314,7 @@ begin
     rdIndexInc(ahead-10);
     i:=i+ahead-10;
     end;
-    Form1.lReply.Caption:=intToStr(i)+'/'+intToStr(n);                                         //TdDo: Доделать
+    Form1.progresLb.Caption:=intToStr(i)+'/'+intToStr(n);                                         //TdDo: Доделать
   end;
 end;
 
@@ -325,6 +336,24 @@ begin
     begin
     getDataFromCounter(startSample*8, amountToRead*8);
     myDataDecoder64(amountToRead*8);
+    end;
+end;
+
+procedure getSpecSamples64NoSaving(startSample:integer; amountToRead: integer);
+var firstPart, secondPart :Integer;
+begin
+  if ((startSample>2047) or (startSample<0) or (amountToRead>2048)) then
+  ShowMessage('incorrect input in getspecsamples64');
+  if amountToRead+startSample > ONE_TIME_SAMPLES then
+    begin
+    firstPart:=ONE_TIME_SAMPLES - startSample;
+    secondPart:=amountToRead-firstPart;
+    getDataFromCounter(startSample*8,firstPart*8);
+    getDataFromCounter(0,secondPart*8);
+    end
+  else
+    begin
+    getDataFromCounter(startSample*8, amountToRead*8);
     end;
 end;
 
@@ -927,8 +956,8 @@ end;
 
 procedure calculateCalibrationInfo();
 begin
-checkIfRawDataAvailable();
-hyst();
+checkIfRawDataAvailable;
+getHyst;
 getCalibration(0);
 getCalibration(1);
 getCalibration(2);
@@ -981,6 +1010,7 @@ end;
 
 procedure TForm1.saveCalibrationBtnClick(Sender: TObject);
 var i : Integer;
+f: TextFile;
 begin
 if (not dlgSaveRawData.Execute) then Exit;
 AssignFile(f,dlgSaveRawData.FileName);
@@ -993,6 +1023,58 @@ for i:= 0 to 2 do
   writeln(f,K[i]);
   end;
 CloseFile(f);
+end;
+
+procedure TForm1.GoBtnClick(Sender: TObject);
+var n,i : Integer;
+begin
+  if (not dlgSaveRawData.Execute) then Exit;
+  globalFilePrefix:=dlgSaveRawData.FileName;
+  testConnection;
+  try
+    n:=StrToInt(lengthEdt.Text);
+  except
+    ShowMessage('you have to write number');
+    form1.edtPackageAmount.SetFocus;
+  end;
+  clearBram;
+  for i:=1 to n do
+  begin
+    getDataSmart(5000);
+    Form1.progressTotalBtn.Caption:=intToStr(i)+'/'+intToStr(n);
+    saveSessionToFile(i);
+  end;
+end;
+
+procedure clearBram();
+begin
+  wrIndex:=getCurrWrAddrA;
+  if wrIndex>rdIndex then
+    ahead:=wrIndex-rdIndex
+  else
+    ahead:=(wrIndex-rdIndex+2047);
+  getSpecSamples64NoSaving(rdIndex, ahead-1);
+end;
+
+procedure saveSessionToFile(sessionNumber : Integer);
+var f:  File;
+name: String;
+begin
+  name:=globalFilePrefix+intToStr(sessionNumber);
+  AssignFile(f,name);
+  Rewrite(f,1);
+  if nextFreeSlot = 0 then
+  begin
+    ShowMessage(' no raw data');
+    Exit;
+  end;
+  if hystReady=False then
+  begin
+    ShowMessage('no hyst in memory');
+    Exit;
+  end;
+  generateAndSaveData(f);
+  CloseFile(f);
 end;
 
 end.
