@@ -64,7 +64,7 @@ type
   oneSampleInfo = record
     adc           : Integer;    {данные с АЦП}
     chanel        : byte;       {номер кананла}
-    counter       : Integer;    {показания счетчика}
+    counter       : int64;    {показания счетчика}
     error         : Boolean;    {флаг ошибки}
   end;
   TForm1 = class(TForm)
@@ -91,6 +91,7 @@ type
     btnWindowOffset: TButton;
     cbOutputType: TCheckBox;
     btnMakeBinary: TButton;
+    saveCalibrationBtn: TButton;
     procedure FormCreate(Sender: TObject);
     procedure btnGetDataFromCounterClick(Sender: TObject);
     procedure btnSaveRawClick(Sender: TObject);
@@ -106,6 +107,7 @@ type
     procedure btnMemOverClick(Sender: TObject);
     procedure btnWindowOffsetClick(Sender: TObject);
     procedure btnMakeBinaryClick(Sender: TObject);
+    procedure saveCalibrationBtnClick(Sender: TObject);
   private
     { Private declarations }
   public
@@ -116,13 +118,13 @@ const
   GAP_DATA_AVAILBALE = 100;
   DATA_TO_COUNTER_MAX = 100;
   READ_OFFSET=110;
-  DATA_FROM_COUNTER_MAX = 8200;
+  DATA_FROM_COUNTER_MAX = 16400;
   N_MAX  =1000;
   HYST_MAX=4096;
-  ONE_TIME_SAMPLES = 2047; //we can't change it, its just all memory in BRAM
+  ONE_TIME_SAMPLES = 2048; //we can't change it, its just all memory in BRAM
   CHANEL_AMOUNT = 3;
   HYS_IRF_LENGTH = 1000;
-  QELIZABETH_MAX = ONE_TIME_SAMPLES * N_MAX; //(1000) myltiply N_MAX(max amount of packages (2047 structures in 1 package))
+  QELIZABETH_MAX = ONE_TIME_SAMPLES * N_MAX; //(1000) myltiply N_MAX(max amount of packages (DEPRECATED 2047 structures in 1 package)) 2048NOW
 type
   TCustomBinary = record
     chanel : word;
@@ -144,24 +146,29 @@ var
   wrIndex, memOverflowFlag:Integer;
 function connectToCounter : Boolean;
 procedure testConnection;
-function getDataFromCounter(initialAddr:Integer = 0; dataBlock:Integer = 8191) : Boolean;
+function getDataFromCounter(initialAddr:Integer = 0; dataBlock:Integer = 16383) : Boolean;
 function getCurrWrAddrA : Integer;
 function getMemoryOverflowFlag : Boolean;
 function dataAvailableQuery(wr:Integer; rd:Integer) : Boolean;
 procedure myDataDecoder(packageSize: Integer = 8188);
+procedure myDataDecoder64 (packageSize: Integer = 16383);
 procedure getNPackages(n: Integer);
 procedure getHyst;
 procedure getCalibration(ch:Byte);
 procedure getIRFFromAailableData;
 procedure getDataSmart(n:Integer);
 procedure getSpecSamples(start_sample:integer; amount_to_read:integer);
+procedure getSpecSamples64(startSample:integer; amountToRead: integer);
 procedure rdIndexInc(n:Integer);
+procedure rdIndexInc64(n: Integer);
 procedure clearAll;
 function setWindowOffset(startCount:Integer; stopCount:Integer): Boolean;
 function setWindowFlag:Boolean;
 function Power(base: Cardinal; power: Cardinal):Cardinal;
 procedure generateAndSaveData( var f : File);
 procedure generateAndSaveDataText ( var f : TextFile);
+function pow(power: Integer):int64;
+function checkIfRawDataAvailable():Boolean;
 
 implementation
 
@@ -263,7 +270,13 @@ var newIndex : integer;
 begin
   rdIndex:= rdIndex+n;
   if rdIndex > 2047 then rdIndex:=(rdIndex+1)mod 2048;
+end;
 
+procedure rdIndexInc64(n: Integer);
+var newIndex :integer;
+begin
+  rdIndex:=rdIndex+n;
+  if rdIndex>2047 then rdIndex:=rdIndex mod 2048;
 end;
 
 procedure getDataSmart(n:Integer);
@@ -278,20 +291,41 @@ begin
     else
     ahead:=(wrIndex-rdIndex+2047);
     if ahead<READ_OFFSET then Continue;
-     if n-i<ahead-10 then
+    if n-i<ahead-10 then
     begin
-    getSpecSamples(rdIndex, n-i);
+    getSpecSamples64(rdIndex, n-i);
     rdIndexInc(n-i);
     i:=n;
     end
     else
     begin
-    getSpecSamples(rdIndex, ahead-10);
+    getSpecSamples64(rdIndex, ahead-10);
     rdIndexInc(ahead-10);
     i:=i+ahead-10;
     end;
     Form1.lReply.Caption:=intToStr(i)+'/'+intToStr(n);                                         //TdDo: Доделать
   end;
+end;
+
+procedure getSpecSamples64(startSample:integer; amountToRead: integer);
+var firstPart, secondPart :Integer;
+begin
+  if ((startSample>2047) or (startSample<0) or (amountToRead>2048)) then
+  ShowMessage('incorrect input in getspecsamples64');
+  if amountToRead+startSample > ONE_TIME_SAMPLES then
+    begin
+    firstPart:=ONE_TIME_SAMPLES - startSample;
+    secondPart:=amountToRead-firstPart;
+    getDataFromCounter(startSample*8,firstPart*8);
+    myDataDecoder64(firstPart*8);
+    getDataFromCounter(0,secondPart*8);
+    myDataDecoder64(secondPart*8);
+    end
+  else
+    begin
+    getDataFromCounter(startSample*8, amountToRead*8);
+    myDataDecoder64(amountToRead*8);
+    end;
 end;
 
 procedure getSpecSamples(start_sample:integer; amount_to_read:integer);
@@ -531,6 +565,40 @@ begin
   end;
 end;
 
+procedure myDataDecoder64 (packageSize: Integer = 16383);
+var i,j :Integer;
+begin
+  i:=0;
+  j:=nextFreeSlot;
+  while i<packageSize do //16383 is full memory
+    begin
+    qElizabeth[j].counter:= dataFromC[i]
+                            +dataFromC[i+1]*pow(1)
+                            +dataFromC[i+2]*pow(2)
+                            +dataFromC[i+3]*pow(3)
+                            +dataFromC[i+4]*pow(4)
+                            +dataFromC[i+5]*pow(5);
+    qElizabeth[j].adc:= dataFromC[i+6]+(dataFromC[i+7]and $0f)*256;
+    qElizabeth[j].chanel:= dataFromC[i+7] shr 5;
+    if (((dataFromC[i+3] shl 3) shr 7)=$01) then
+    qElizabeth[j].error := True else
+    qElizabeth[j].error := False;
+    i:=i+8;
+    j:=j+1;
+    end;
+nextFreeSlot:=j;
+end;
+
+function pow(power: Integer):int64;
+var res :int64;
+    i:integer;
+begin
+  res:=1;
+  for i:= 1 to power do
+  res:=res*256;
+  Result:=res;
+end;
+
 procedure myDataDecoder(packageSize: Integer = 8188);
 var i, j: Integer;
 begin
@@ -570,7 +638,7 @@ begin
   end;
 end;
 
-function getDataFromCounter(initialAddr:Integer = 0; dataBlock:Integer = 8191):Boolean;
+function getDataFromCounter(initialAddr:Integer = 0; dataBlock:Integer = 16383):Boolean;
 var    i     : integer;
   CReply   : string;
   begin
@@ -579,7 +647,7 @@ var    i     : integer;
     CReply:='';
     //создаем строку для отправки: 12.20.00.##.##   (запрос на получения пакета длиной ...)
     dataToC[0]:=$12;//$;
-    dataToC[1]:=(initialAddr div 256)+$20;
+    dataToC[1]:=(initialAddr div 256)+$40;
     //dataToC[1]:=$20;
     dataToC[2]:=(initialAddr mod 256);
     //dataToC[2]:=$00;
@@ -722,7 +790,7 @@ if ( not dlgSaveRawData.Execute ) then Exit;
   i:=0;
   while i<nextFreeSlot do
   begin
-    Writeln(fTxt,qElizabeth[i].chanel:3,' ',qElizabeth[i].ADC:4,' ',qElizabeth[i].counter);
+    Writeln(fTxt,qElizabeth[i].chanel:3,' ',qElizabeth[i].ADC:4,' ',qElizabeth[i].counter:10);
     i:=i+1;
   end;
   closeFile(fTxt);
@@ -857,10 +925,28 @@ setWindowOffset(startOffset, stopOffset);
 setWindowFlag;
 end;
 
+procedure calculateCalibrationInfo();
+begin
+checkIfRawDataAvailable();
+hyst();
+getCalibration(0);
+getCalibration(1);
+getCalibration(2);
+end;
+
+function checkIfRawDataAvailable():Boolean;
+begin
+if nextFreeSlot = 0 then
+  begin
+    ShowMessage(' no raw data');
+    Exit;
+  end;
+Result:=true;
+end;
+
 procedure TForm1.btnMakeBinaryClick(Sender: TObject);
 var     fBin: File;
         fTxt: TextFile;
-
 begin
   if nextFreeSlot = 0 then
   begin
@@ -891,6 +977,22 @@ begin
     generateAndSaveData(fBin);
     CloseFile(fBin);
   end;
+end;
+
+procedure TForm1.saveCalibrationBtnClick(Sender: TObject);
+var i : Integer;
+begin
+if (not dlgSaveRawData.Execute) then Exit;
+AssignFile(f,dlgSaveRawData.FileName);
+Rewrite(f);
+calculateCalibrationInfo();
+for i:= 0 to 2 do
+  begin
+  writeln(f,originEnd[i]);
+  writeln(f,origin[i]);
+  writeln(f,K[i]);
+  end;
+CloseFile(f);
 end;
 
 end.

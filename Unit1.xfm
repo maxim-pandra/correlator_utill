@@ -4,7 +4,7 @@ object Form1: TForm1
   Width = 860
   Height = 267
   VertScrollBar.Range = 241
-  HorzScrollBar.Range = 729
+  HorzScrollBar.Range = 753
   ActiveControl = btnGetDataFromCounter
   Caption = 'Form1'
   Color = clBackground
@@ -198,6 +198,15 @@ object Form1: TForm1
     Caption = 'makeBinary'
     TabOrder = 21
     OnClick = btnMakeBinaryClick
+  end
+  object saveCalibrationBtn: TButton
+    Left = 640
+    Top = 184
+    Width = 113
+    Height = 25
+    Caption = 'save calibration'
+    TabOrder = 22
+    OnClick = saveCalibrationBtnClick
   end
   object dlgSaveRawData: TSaveDialog
     FilterIndex = 0
