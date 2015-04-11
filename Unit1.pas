@@ -71,27 +71,6 @@ type
     lIndecator: TLabel;
     lReply: TLabel;
     dlgSaveRawData: TSaveDialog;
-    btnGetDataFromCounter: TButton;
-    btnSaveRaw: TButton;
-    btnGetNPackages: TButton;
-    edtPackageAmount: TEdit;
-    lpackagesGot: TLabel;
-    btnGetHyst: TButton;
-    btnSaveDecodedDataToFile: TButton;
-    btnSvHyst: TButton;
-    btnClrHyst: TButton;
-    btnSvIRF: TButton;
-    btnShowCWA: TButton;
-    btnGetDataSmart: TButton;
-    edtSamplesAmount: TEdit;
-    edtTestFrom: TEdit;
-    edtTestAmount: TEdit;
-    btnGetSamples: TButton;
-    btnMemOver: TButton;
-    btnWindowOffset: TButton;
-    cbOutputType: TCheckBox;
-    btnMakeBinary: TButton;
-    saveCalibrationBtn: TButton;
     lengthEdt: TEdit;
     GoBtn: TButton;
     progresLb: TLabel;
@@ -568,12 +547,12 @@ begin
   if n<0 then
     begin
      n:=n*(-1);
-     form1.edtSamplesAmount.Text:=IntToStr(n);
+     //form1.edtSamplesAmount.Text:=IntToStr(n);
      end;
   if n>N_MAX then
     begin
         n:=N_MAX;
-        form1.edtSamplesAmount.Text:=IntToStr(n);
+        //form1.edtSamplesAmount.Text:=IntToStr(n);
     end;
 
 end;
@@ -586,17 +565,17 @@ begin
   if N<0 then
     begin
      N:=N*(-1);
-     form1.edtPackageAmount.Text:=IntToStr(N);
+     //form1.edtPackageAmount.Text:=IntToStr(N);
      end;
   if N>N_MAX then
     begin
         N:=N_MAX;
-        form1.edtPackageAmount.Text:=IntToStr(N);
+        //form1.edtPackageAmount.Text:=IntToStr(N);
     end;
   while i<N do
   begin
   i:=i+1;
-  Form1.lpackagesGot.Caption:=IntToStr(i)+'/'+intToStr(N);
+  //Form1.lpackagesGot.Caption:=IntToStr(i)+'/'+intToStr(N);
   getDataFromCounter;
   myDataDecoder;
   end;
@@ -764,38 +743,7 @@ begin
 //CReply:='';
 testConnection;
 getDataFromCounter;
-Form1.btnGetHyst.Enabled:=True;
-end;
-
-procedure TForm1.btnSaveRawClick(Sender: TObject);
-var f: TextFile;
-  i:Integer;
-begin
-if dlgSaveRawData.Execute then
-  begin
-    AssignFile(f,dlgSaveRawData.FileName);
-    Rewrite(f);
-  end
-  else
-  ShowMessage('Faild while creating a file for raw data');
-for i:=0 to   (answerLength-1) do
-  Writeln(f,intToHex(dataFromC[i],2));
-CloseFile(f);
-end;
-
-procedure TForm1.btnGetNPackagesClick(Sender: TObject);
-var n: Integer;
-begin
-//for i:=0 to DATA_TO_COUNTER_MAX do dataToC[i]:=0;
-//CReply:='';
-testConnection;
-  try n:=StrToInt(edtPackageAmount.Text);
-    except
-    ShowMessage('you have to write number');
-    form1.edtPackageAmount.SetFocus;
-    end;
-getNPackages(n);
-Form1.btnGetHyst.Enabled:=True;
+//Form1.btnGetHyst.Enabled:=True;
 end;
 
 procedure getHyst;
@@ -901,68 +849,6 @@ begin
 Form1.lIndecator.Caption:=BoolToStr(getMemoryOverflowFlag, True);
 end;
 
-procedure TForm1.btnGetDataSmartClick(Sender: TObject);
-var n: Integer;
-begin
-testConnection;
-  try n:=StrToInt(edtSamplesAmount.Text);
-    except
-    ShowMessage('you have to write number');
-    form1.edtSamplesAmount.SetFocus;
-    end;
-getDataSmart(n);
-Form1.btnGetHyst.Enabled:=True;
-end;
-
-procedure TForm1.btnGetSamplesClick(Sender: TObject);
-var startSample,amountToRead : Integer;
-begin
-startSample:=  StrToInt(edtTestFrom.Text);
-amountToRead:= StrToInt(edtTestAmount.Text);
-
-getSpecSamples(startSample,amountToRead);
-end;
-
-procedure TForm1.btnWindowOffsetClick(Sender: TObject);
-var startOffset, stopOffset : Cardinal;
-begin
-//получаем отступы...
-try
-  startOffset := StrToInt(edtTestFrom.Text);
-except
-  ShowMessage('you have to write number (startWindowOffset)');
-  form1.edtTestFrom.SetFocus;
-  Exit;
-end;
-
-try
-  stopOffset := StrToInt(edtTestAmount.Text);
-except
-  ShowMessage('you have to write number (stopWindowOffset)');
-  form1.edtTestAmount.SetFocus;
-  Exit;
-end;
-
-
-if startOffset >= stopOffset then
-  begin
-    ShowMessage('start is greater than stop witch is wrong');
-    edtTestFrom.SetFocus;
-    Exit;
-  end;
-
-//проверяем полученные данные  (тут нужно удостовериться что данные оказались меньше 16 бит)
-if ((startOffset div Power(2,16)) >0) then
-    ShowMessage('startOffset is out of bound');
-if stopOffset div Power(2,16) >0 then
-    ShowMessage('stopOffset is out of bound');
-
-//инициализируем требуемое окно
-setWindowOffset(startOffset, stopOffset);
-//включаем режим работы окно
-setWindowFlag;
-end;
-
 procedure calculateCalibrationInfo();
 begin
 checkIfRawDataAvailable;
@@ -982,58 +868,6 @@ if nextFreeSlot = 0 then
 Result:=true;
 end;
 
-procedure TForm1.btnMakeBinaryClick(Sender: TObject);
-var     fBin: File;
-        fTxt: TextFile;
-begin
-  if nextFreeSlot = 0 then
-  begin
-    ShowMessage(' no raw data');
-    Exit;
-  end;
-  if hystReady=False then
-  begin
-    ShowMessage('no hyst in memory');
-    Exit;
-  end;
-  getCalibration(0);
-  getCalibration(1);
-  getCalibration(2);
-  if (cbOutputType.Checked = True) then
-  begin
-    if(not dlgSaveRawData.Execute) then Exit;
-    AssignFile(fTxt,dlgSaveRawData.FileName);
-    Rewrite(fTxt);
-    generateAndSaveDataText(fTxt);
-    CloseFile(fTxt);
-  end
-    else
-  begin
-    if (not dlgSaveRawData.Execute) then Exit;
-    AssignFile(fBin,dlgSaveRawData.FileName);
-    Rewrite(fBin,1);
-    generateAndSaveData(fBin);
-    CloseFile(fBin);
-  end;
-end;
-
-procedure TForm1.saveCalibrationBtnClick(Sender: TObject);
-var i : Integer;
-f: TextFile;
-begin
-if (not dlgSaveRawData.Execute) then Exit;
-AssignFile(f,dlgSaveRawData.FileName);
-Rewrite(f);
-calculateCalibrationInfo();
-for i:= 0 to 2 do
-  begin
-  writeln(f,originEnd[i]);
-  writeln(f,origin[i]);
-  writeln(f,K[i]);
-  end;
-CloseFile(f);
-end;
-
 procedure TForm1.GoBtnClick(Sender: TObject);
 var n,i : Integer;
 begin
@@ -1042,7 +876,7 @@ begin
     n:=StrToInt(lengthEdt.Text);
   except
     ShowMessage('you have to write number');
-    form1.edtPackageAmount.SetFocus;
+    form1.lengthEdt.SetFocus;
   end;
   clearBram;
   for i:=1 to n do
