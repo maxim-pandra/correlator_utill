@@ -74,7 +74,6 @@ type
     lengthEdt: TEdit;
     GoBtn: TButton;
     progresLb: TLabel;
-    resetBtn: TButton;
     loadCalBtn: TButton;
     Label1: TLabel;
     progressTotalBtn: TLabel;
@@ -83,20 +82,6 @@ type
     Label2: TLabel;
     procedure FormCreate(Sender: TObject);
     procedure btnGetDataFromCounterClick(Sender: TObject);
-    procedure btnSaveRawClick(Sender: TObject);
-    procedure btnGetNPackagesClick(Sender: TObject);
-    procedure btnGetHystClick(Sender: TObject);
-    procedure btnSaveDecodedDataToFileClick(Sender: TObject);
-    procedure btnSvHystClick(Sender: TObject);
-    procedure btnClrHystClick(Sender: TObject);
-    procedure btnSvIRFClick(Sender: TObject);
-    procedure btnShowCWAClick(Sender: TObject);
-    procedure btnGetDataSmartClick(Sender: TObject);
-    procedure btnGetSamplesClick(Sender: TObject);
-    procedure btnMemOverClick(Sender: TObject);
-    procedure btnWindowOffsetClick(Sender: TObject);
-    procedure btnMakeBinaryClick(Sender: TObject);
-    procedure saveCalibrationBtnClick(Sender: TObject);
     procedure GoBtnClick(Sender: TObject);
     procedure loadCalBtnClick(Sender: TObject);
     procedure browseClick(Sender: TObject);
@@ -758,95 +743,6 @@ i:=0;
     i:=i+1;
   end;
   hystReady:=True;
-end;
-procedure TForm1.btnGetHystClick(Sender: TObject);
-var i:Integer;
-begin
-getHyst;
-end;
-
-procedure TForm1.btnSaveDecodedDataToFileClick(Sender: TObject);
-var
-  fTxt: TextFile;
-  i: Cardinal;
-begin
-if ( not dlgSaveRawData.Execute ) then Exit;
-  AssignFile(fTxt, dlgSaveRawData.FileName);
-  Rewrite(fTxt);
-  i:=0;
-  while i<nextFreeSlot do
-  begin
-    Writeln(fTxt,qElizabeth[i].chanel:3,' ',qElizabeth[i].ADC:4,' ',qElizabeth[i].counter:10);
-    i:=i+1;
-  end;
-  closeFile(fTxt);
-end;
-
-procedure TForm1.btnSvHystClick(Sender: TObject);
-var f:TextFile;
-    i:Integer;
-begin
-  if (not dlgSaveRawData.Execute) then Exit;
-  AssignFile(f,dlgSaveRawData.FileName);
-  Rewrite(f);
-  for i:=0 to HYST_MAX do
-  begin
-    Writeln(f,i,' ',hyst[0,i]:4,' ' ,hyst[1,i]:4,' ',hyst[2,i]:4);
-  end;
-  CloseFile(f);
-end;
-
-procedure TForm1.btnClrHystClick(Sender: TObject);
-var i: Integer;
-begin
-for i:=1 to HYST_MAX do
-begin
-  hyst[0,i]:=0;
-  hyst[1,i]:=0;
-  hyst[2,i]:=0;
-end;
-hystReady:=False;
-end;
-
-procedure TForm1.btnSvIRFClick(Sender: TObject);
-var f:TextFile;
-    i:Integer;
-begin
-if (not dlgSaveRawData.Execute) then Exit;
-  AssignFile(f,dlgSaveRawData.FileName);
-  Rewrite(f);
-  if nextFreeSlot = 0 then
-  begin
-    ShowMessage(' no raw data');
-    Exit;
-  end;
-  if hystReady=False then
-  begin
-    ShowMessage('no hyst in memory');
-    Exit;
-  end;
-  getCalibration(0);
-  getCalibration(1);
-  getCalibration(2);
-  getIRFFromAailableData;
-  for i:=0 to HYS_IRF_LENGTH do
-  begin
-    write(f,i:3);
-    write(f,histogramIRF1[i]:8);
-    Writeln(f,histogramIRF2[i]:8);
-  end;
-
-  CloseFile(f);
-end;
-
-procedure TForm1.btnShowCWAClick(Sender: TObject);
-begin
-Form1.lIndecator.Caption:=IntToStr(getCurrWrAddrA);
-end;
-
-procedure TForm1.btnMemOverClick(Sender: TObject);
-begin
-Form1.lIndecator.Caption:=BoolToStr(getMemoryOverflowFlag, True);
 end;
 
 procedure calculateCalibrationInfo();
