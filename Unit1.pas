@@ -100,6 +100,8 @@ type
     Label1: TLabel;
     progressTotalBtn: TLabel;
     OpenDialog: TOpenDialog;
+    browse: TButton;
+    Label2: TLabel;
     procedure FormCreate(Sender: TObject);
     procedure btnGetDataFromCounterClick(Sender: TObject);
     procedure btnSaveRawClick(Sender: TObject);
@@ -118,6 +120,7 @@ type
     procedure saveCalibrationBtnClick(Sender: TObject);
     procedure GoBtnClick(Sender: TObject);
     procedure loadCalBtnClick(Sender: TObject);
+    procedure browseClick(Sender: TObject);
   private
     { Private declarations }
   public
@@ -155,6 +158,7 @@ var
   rdIndex  :Integer  = 0;
   wrIndex, memOverflowFlag:Integer;
   globalFilePrefix:String;
+  goIsEnabled:Boolean = false;
 function connectToCounter : Boolean;
 procedure testConnection;
 function getDataFromCounter(initialAddr:Integer = 0; dataBlock:Integer = 16383) : Boolean;
@@ -183,6 +187,7 @@ function checkIfRawDataAvailable():Boolean;
 procedure saveSessionToFile(sessionNumber : Integer);
 procedure clearBram();
 procedure tryToLoadCalibration(custom:Boolean);
+procedure saveSessionToTextFile(sessionNumber : Integer);
 
 implementation
 
@@ -1032,8 +1037,6 @@ end;
 procedure TForm1.GoBtnClick(Sender: TObject);
 var n,i : Integer;
 begin
-  if (not dlgSaveRawData.Execute) then Exit;
-  globalFilePrefix:=dlgSaveRawData.FileName;
   testConnection;
   try
     n:=StrToInt(lengthEdt.Text);
@@ -1046,7 +1049,8 @@ begin
   begin
     getDataSmart(5000);
     Form1.progressTotalBtn.Caption:=intToStr(i)+'/'+intToStr(n);
-    saveSessionToFile(i);
+    saveSessionToTextFile(i);  //saveSessionToFile(i);
+    nextFreeSlot:=0;
   end;
 end;
 
@@ -1073,14 +1077,27 @@ begin
     ShowMessage(' no raw data');
     Exit;
   end;
-  if hystReady=False then
-  begin
-    ShowMessage('no hyst in memory');
-    Exit;
-  end;
   generateAndSaveData(f);
   CloseFile(f);
 end;
+
+procedure saveSessionToTextFile(sessionNumber : Integer);
+var f: TextFile;
+name: String;
+begin
+  name:=globalFilePrefix+intToStr(sessionNumber);
+  AssignFile(f,name);
+  Rewrite(f);
+  if nextFreeSlot = 0 then
+  begin
+    ShowMessage(' no raw data');
+    Exit;
+  end;
+  generateAndSaveDataText(f);
+  CloseFile(f);
+
+end;
+
 
 
 procedure tryToLoadCalibration(custom:Boolean);
@@ -1088,8 +1105,9 @@ var f :textFile;
 i:integer;
 begin
 if (custom = true) then
-  if (not OpenDialog.Execute) then Exit;
-  AssignFile(f,OpenDialog.FileName);
+begin
+  if (not Form1.OpenDialog.Execute) then Exit;
+  AssignFile(f,Form1.OpenDialog.FileName);
   reset(f);
   for i:= 0 to 2 do
   begin
@@ -1098,7 +1116,9 @@ if (custom = true) then
     readln(f,K[i]);
   end;
   close(f);
+end
 else
+begin
   AssignFile(f,'.\calibration.cfg');
   try
   reset(f);
@@ -1114,10 +1134,18 @@ else
   end;
   close(f);
 end;
+end;
 
 procedure TForm1.loadCalBtnClick(Sender: TObject);
 begin
 tryToLoadCalibration(true);
+end;
+
+procedure TForm1.browseClick(Sender: TObject);
+begin
+  if (not dlgSaveRawData.Execute) then Exit;
+  globalFilePrefix:=dlgSaveRawData.FileName;
+  GoBtn.Enabled:=true;
 end;
 
 end.

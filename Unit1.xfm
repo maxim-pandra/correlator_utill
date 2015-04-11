@@ -200,8 +200,8 @@ object Form1: TForm1
     OnClick = btnMakeBinaryClick
   end
   object saveCalibrationBtn: TButton
-    Left = 784
-    Top = 128
+    Left = 624
+    Top = 48
     Width = 121
     Height = 25
     Caption = 'save calibration'
@@ -210,25 +210,26 @@ object Form1: TForm1
   end
   object lengthEdt: TEdit
     Left = 784
-    Top = 48
+    Top = 80
     Width = 81
-    Height = 25
+    Height = 21
     Hint = 'length'
     TabOrder = 23
     Text = 'lengthEdt'
   end
   object GoBtn: TButton
     Left = 872
-    Top = 48
+    Top = 80
     Width = 33
     Height = 25
     Caption = 'Go'
+    Enabled = False
     TabOrder = 24
     OnClick = GoBtnClick
   end
   object progresLb: TLabel
     Left = 784
-    Top = 80
+    Top = 112
     Width = 126
     Height = 13
     Caption = 'progress in current session'
@@ -239,6 +240,7 @@ object Form1: TForm1
     Width = 121
     Height = 25
     Caption = 'reset'
+    Enabled = False
     TabOrder = 26
   end
   object loadCalBtn: TButton
@@ -260,24 +262,40 @@ object Form1: TForm1
   end
   object progressTotalBtn: TLabel
     Left = 784
-    Top = 104
+    Top = 136
     Width = 106
     Height = 13
     Caption = 'progress in experiment'
+  end
+  object browse: TButton
+    Left = 856
+    Top = 48
+    Width = 49
+    Height = 25
+    Caption = 'browse'
+    TabOrder = 30
+    OnClick = browseClick
+  end
+  object Label2: TLabel
+    Left = 784
+    Top = 56
+    Width = 60
+    Height = 13
+    Caption = 'chouse path'
   end
   object dlgSaveRawData: TSaveDialog
     FilterIndex = 0
     Height = 0
     Title = 'Save'
     Width = 0
-    Left = 64
-    Top = 200
+    Left = 848
+    Top = 120
   end
   object OpenDialog: TOpenDialog
     FilterIndex = 0
     Height = 0
     Width = 0
-    Left = 64
-    Top = 152
+    Left = 880
+    Top = 120
   end
 end
