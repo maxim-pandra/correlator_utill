@@ -80,6 +80,7 @@ type
     OpenDialog: TOpenDialog;
     browse: TButton;
     Label2: TLabel;
+    errorCountlb: TLabel;
     procedure FormCreate(Sender: TObject);
     procedure btnGetDataFromCounterClick(Sender: TObject);
     procedure GoBtnClick(Sender: TObject);
@@ -123,6 +124,7 @@ var
   wrIndex, memOverflowFlag:Integer;
   globalFilePrefix:String;
   goIsEnabled:Boolean = false;
+  dataTransferError : Integer = 0;
 function connectToCounter : Boolean;
 procedure testConnection;
 function getDataFromCounter(initialAddr:Integer = 0; dataBlock:Integer = 16383) : Boolean;
@@ -660,7 +662,9 @@ var    i     : integer;
     Result:=True;
     if PB_SendCommandToDevice(MyDevNumber,1, dataToC,dataFromC, msgLength, answerLength, CReply) <> PB_Data then
     begin
-    ShowMessage('PB_SendCommandToDevice != PB_Data');
+    //ShowMessage('PB_SendCommandToDevice != PB_Data');
+    dataTransferError:=dataTransferError  + 1;
+    Form1.errorCountlb.Caption:='error count'+IntToStr(dataTransferError);
     Result:=False;
     end;
   end;

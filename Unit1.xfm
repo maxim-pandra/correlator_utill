@@ -2,8 +2,8 @@ object Form1: TForm1
   Left = 272
   Top = 124
   Width = 157
-  Height = 208
-  VertScrollBar.Range = 185
+  Height = 247
+  VertScrollBar.Range = 229
   HorzScrollBar.Range = 146
   ActiveControl = lengthEdt
   Caption = 'Form1'
@@ -93,6 +93,13 @@ object Form1: TForm1
     Width = 60
     Height = 13
     Caption = 'chouse path'
+  end
+  object errorCountlb: TLabel
+    Left = 24
+    Top = 216
+    Width = 76
+    Height = 13
+    Caption = 'amount of errors'
   end
   object dlgSaveRawData: TSaveDialog
     FilterIndex = 0
