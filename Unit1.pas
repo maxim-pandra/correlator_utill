@@ -102,6 +102,7 @@ type
     OpenDialog: TOpenDialog;
     browse: TButton;
     Label2: TLabel;
+    resetPointersBtn: TButton;
     procedure FormCreate(Sender: TObject);
     procedure btnGetDataFromCounterClick(Sender: TObject);
     procedure btnSaveRawClick(Sender: TObject);
@@ -121,6 +122,7 @@ type
     procedure GoBtnClick(Sender: TObject);
     procedure loadCalBtnClick(Sender: TObject);
     procedure browseClick(Sender: TObject);
+    procedure resetPointersBtnClick(Sender: TObject);
   private
     { Private declarations }
   public
@@ -188,6 +190,7 @@ procedure saveSessionToFile(sessionNumber : Integer);
 procedure clearBram();
 procedure tryToLoadCalibration(custom:Boolean);
 procedure saveSessionToTextFile(sessionNumber : Integer);
+function resetMemoryPointers :Boolean;
 
 implementation
 
@@ -204,6 +207,22 @@ var    S , i: Cardinal;
     S:=S*base;
     Result:= S;
   end;
+
+function resetMemoryPointers :Boolean;
+var  CReply : string;
+begin
+CReply:='';
+dataToC[0]:=$14;
+dataToC[1]:=$01;//1100 0000
+msgLength:=2;
+Result:=True;
+if PB_SendCommandToDevice(MyDevNumber,1, dataToC,dataFromC, msgLength, answerLength, CReply) <> PB_Data then
+  begin
+  ShowMessage('PB_SendCommandToDevice != PB_Data');
+  Result:=False;
+  end;
+end;
+
 function setWindowFlag :Boolean;
  var  CReply : string;
   begin
@@ -1146,6 +1165,11 @@ begin
   if (not dlgSaveRawData.Execute) then Exit;
   globalFilePrefix:=dlgSaveRawData.FileName;
   GoBtn.Enabled:=true;
+end;
+
+procedure TForm1.resetPointersBtnClick(Sender: TObject);
+begin
+  resetMemoryPointers;
 end;
 
 end.

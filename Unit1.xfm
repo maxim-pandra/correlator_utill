@@ -283,6 +283,15 @@ object Form1: TForm1
     Height = 13
     Caption = 'chouse path'
   end
+  object resetPointersBtn: TButton
+    Left = 64
+    Top = 168
+    Width = 81
+    Height = 25
+    Caption = 'reset memory'
+    TabOrder = 32
+    OnClick = resetPointersBtnClick
+  end
   object dlgSaveRawData: TSaveDialog
     FilterIndex = 0
     Height = 0
