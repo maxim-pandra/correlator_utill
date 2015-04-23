@@ -151,9 +151,11 @@ procedure generateAndSaveDataText ( var f : TextFile);
 function pow(power: Integer):int64;
 function checkIfRawDataAvailable():Boolean;
 procedure saveSessionToFile(sessionNumber : Integer);
-procedure clearBram();
+procedure clearBramSoft;
+procedure clearBramHard;
 procedure tryToLoadCalibration(custom:Boolean);
 procedure saveSessionToTextFile(sessionNumber : Integer);
+function resetMemoryPointers :Boolean;
 
 implementation
 
@@ -778,7 +780,7 @@ begin
     ShowMessage('you have to write number');
     form1.lengthEdt.SetFocus;
   end;
-  clearBram;
+  clearBramHard;
   for i:=1 to n do
   begin
     getDataSmart(5000);
@@ -788,7 +790,7 @@ begin
   end;
 end;
 
-procedure clearBram();
+procedure clearBramSoft;
 var ahead: integer;
 begin
   wrIndex:=getCurrWrAddrA;
@@ -797,6 +799,12 @@ begin
   else
     ahead:=(wrIndex-rdIndex+2047);
   getSpecSamples64NoSaving(rdIndex, ahead-1);
+end;
+
+procedure clearBramHard;
+begin
+rdIndex:=0;
+resetMemoryPointers;
 end;
 
 procedure saveSessionToFile(sessionNumber : Integer);
@@ -832,6 +840,20 @@ begin
 
 end;
 
+function resetMemoryPointers :Boolean;
+var  CReply : string;
+begin
+CReply:='';
+dataToC[0]:=$14;
+dataToC[1]:=$01;//1100 0000
+msgLength:=2;
+Result:=True;
+if PB_SendCommandToDevice(MyDevNumber,1, dataToC,dataFromC, msgLength, answerLength, CReply) <> PB_Data then
+  begin
+  ShowMessage('in function "resetMemoryPointers" != PB_Data');
+  Result:=False;
+  end;
+end;
 
 
 procedure tryToLoadCalibration(custom:Boolean);
