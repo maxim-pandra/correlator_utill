@@ -79,13 +79,20 @@ type
     progressTotalBtn: TLabel;
     OpenDialog: TOpenDialog;
     browse: TButton;
+    Memo1: TMemo;
     Label2: TLabel;
     errorCountlb: TLabel;
+    bPrepareData: TButton;
+    bEraseEverything: TButton;
+    bWriteFrimware: TButton;
     procedure FormCreate(Sender: TObject);
     procedure btnGetDataFromCounterClick(Sender: TObject);
     procedure GoBtnClick(Sender: TObject);
     procedure loadCalBtnClick(Sender: TObject);
     procedure browseClick(Sender: TObject);
+    procedure bPrepareDataClick(Sender: TObject);
+    procedure bEraseEverythingClick(Sender: TObject);
+    procedure bWriteFrimwareClick(Sender: TObject);
   private
     { Private declarations }
   public
@@ -160,7 +167,7 @@ function resetMemoryPointers :Boolean;
 implementation
 
 uses
-  uFTDIFunctions;
+  uFTDIFunctions, uniteFlash;
 
 {$R *.xfm}
 
@@ -903,5 +910,21 @@ begin
   globalFilePrefix:=dlgSaveRawData.FileName;
   GoBtn.Enabled:=true;
 end;
+
+procedure TForm1.bPrepareDataClick(Sender: TObject);
+begin
+fPrepareDataStep;
+end;
+
+procedure TForm1.bEraseEverythingClick(Sender: TObject);
+begin
+fFlashBulkErase;
+end;
+
+procedure TForm1.bWriteFrimwareClick(Sender: TObject);
+begin
+fWriteFrimwareStep;
+end;
+
 
 end.

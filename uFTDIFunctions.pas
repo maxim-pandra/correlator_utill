@@ -27,14 +27,35 @@ type
 
   PicoReplyType = (PB_Failed, PB_NoReply, PB_Illegal, PB_Notification, PB_Data, PB_OK);
 
+const
+  FT_In_Buffer_Index = $FFFF;
+  FT_Out_Buffer_Index = $FFFF;
+    FT_OK = 0;
+  FT_DLL_Name = 'FTD2XX.DLL';
+  //standard & debug Picoblase commands
+  SetMemWIncComm	= $00;    //writes data to IO with address increment (addr+data)
+  SetMemConstComm	= $01;    //writes all data to a fixed address (addr+data)
+  Set16RegComm	= $02;      //sets a 16-bit register, MSB @ addr+1, then LSB @ addr (addr+data)
+  GetMemWIncComm	= $03;	  //reads data from IO with address increment (addr+qty)
+  GetMemConstComm	= $04;    //reads data from a fixed address (addr+qty)
+  DoSPIExchComm	= $05;      //transmits all data to SPI & sends reply
+  WriteFlashComm = $06;     //transmits start address in SPI flash, must be sent before WriteFlashData command
+  ReadFlashComm = $07;      //transmits start address and byte qty (up to 256), recieves data from SPI flash
+  WriteFlashData = $08;     //transmits proper quantity of flash data (up to 1 page)
+  GetDeviceID	= $0E;        //returnes: PCB index, Hardvare version, Software version, Serial number
+  DoEchoComm = $0F;         //returnes all sent data
 var
    FTDevInfo : array [0..15] of FT_Device_Info_Node;
-   FTDevFound, DevNumber, MyDevNumber : integer;
+   ProgDevNum, FTDevFound, DevNumber, MyDevNumber : integer;
+   ProgPBAddr : byte;
    FTDevConnected : array [0..15] of boolean;
    PB_LogEnabled,PB_FullLogView, PB_ErrorShow, PB_ThroughCOM : boolean;
    {FT_NodeTree : TTreeView;}
    {PBFirstReply: TLabel;}
    Lister : TMemo;
+   FT_In_Buffer,FT_In_Buffer1 : Array[0..FT_In_Buffer_Index] of Byte;
+    FT_Out_Buffer,FT_Out_Buffer1 : Array[0..FT_Out_Buffer_Index] of Byte;
+
    FlashTimer : TTimer;
    FlashProgr : TProgressBar;
    FlashSave : TSaveDialog;
@@ -90,22 +111,7 @@ Type FT_Result = Integer;
               end;
 
 const
-  FT_OK = 0;
-  FT_DLL_Name = 'FTD2XX.DLL';
-  FT_In_Buffer_Index = $FFFF;
-  FT_Out_Buffer_Index = $FFFF;
-  //standard & debug Picoblase commands
-  SetMemWIncComm	= $00;    //writes data to IO with address increment (addr+data)
-  SetMemConstComm	= $01;    //writes all data to a fixed address (addr+data)
-  Set16RegComm	= $02;      //sets a 16-bit register, MSB @ addr+1, then LSB @ addr (addr+data)
-  GetMemWIncComm	= $03;	  //reads data from IO with address increment (addr+qty)
-  GetMemConstComm	= $04;    //reads data from a fixed address (addr+qty)
-  DoSPIExchComm	= $05;      //transmits all data to SPI & sends reply
-  WriteFlashComm = $06;     //transmits start address in SPI flash, must be sent before WriteFlashData command
-  ReadFlashComm = $07;      //transmits start address and byte qty (up to 256), recieves data from SPI flash
-  WriteFlashData = $08;     //transmits proper quantity of flash data (up to 1 page)
-  GetDeviceID	= $0E;        //returnes: PCB index, Hardvare version, Software version, Serial number
-  DoEchoComm = $0F;         //returnes all sent data
+
   //service digits
   StartSymbol = $FD;
   StopSymbol = $FE;
@@ -136,15 +142,14 @@ const
   PB_ParamAbsentErr	= $E6;	  //requested parameter is undefined
   PB_MethForbidErr = $E7;	  //method of parameter is not available
 
-var FT_In_Buffer,FT_In_Buffer1 : Array[0..FT_In_Buffer_Index] of Byte;
-    FT_Out_Buffer,FT_Out_Buffer1 : Array[0..FT_Out_Buffer_Index] of Byte;
+var
     RootNode : TTreeNode;
     TimeoutLimit : int64;
     FlashState : TFlashState;
     CurrFlashSize,FlDataQty,CurrFlashIndex,CurrSectorSize,StartFlashAddr,StopFlashAddr,CurrFlashAddr,EraseSize : cardinal;
     //StartFlashAddr,StopFlashAddr,CurrFlashAddr - in Flash address space, CurrFlashIndex - data array index
-    ProgDevNum,VeryErrCounter,PageCounter,MaxPages : integer;
-    ProgPBAddr,CurrEraseComm : byte;
+    VeryErrCounter,PageCounter,MaxPages : integer;
+    CurrEraseComm : byte;
     CurrFlashType : FLASH_Type;
     DatArray : array of byte;
     LogFile : TextFile;

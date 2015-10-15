@@ -1,10 +1,10 @@
 object Form1: TForm1
-  Left = 272
-  Top = 124
-  Width = 157
-  Height = 247
-  VertScrollBar.Range = 229
-  HorzScrollBar.Range = 146
+  Left = 343
+  Top = 86
+  Width = 343
+  Height = 259
+  VertScrollBar.Range = 241
+  HorzScrollBar.Range = 305
   ActiveControl = lengthEdt
   Caption = 'Form1'
   Color = clBackground
@@ -100,6 +100,42 @@ object Form1: TForm1
     Width = 76
     Height = 13
     Caption = 'amount of errors'
+  end
+  object bPrepareData: TButton
+    Left = 192
+    Top = 8
+    Width = 113
+    Height = 25
+    Caption = 'PrepareData'
+    TabOrder = 11
+    OnClick = bPrepareDataClick
+  end
+  object bEraseEverything: TButton
+    Left = 192
+    Top = 40
+    Width = 113
+    Height = 25
+    Caption = 'bEraseEverything'
+    TabOrder = 12
+    OnClick = bEraseEverythingClick
+  end
+  object bWriteFrimware: TButton
+    Left = 192
+    Top = 72
+    Width = 113
+    Height = 25
+    Caption = 'WriteFrimware'
+    TabOrder = 13
+    OnClick = bWriteFrimwareClick
+  end
+  object Memo1: TMemo
+    Left = 192
+    Top = 104
+    Width = 113
+    Height = 137
+    Lines.Strings = (
+      'Memo1')
+    TabOrder = 14
   end
   object dlgSaveRawData: TSaveDialog
     FilterIndex = 0
