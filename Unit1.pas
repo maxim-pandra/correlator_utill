@@ -281,45 +281,35 @@ begin
   begin
     wrIndex:=getCurrWrAddrA;
     if wrIndex>rdIndex then
-    ahead:=wrIndex-rdIndex
+      ahead:=wrIndex-rdIndex
     else
     ahead:=(wrIndex-rdIndex+2047);
     if ahead<READ_OFFSET then Continue;
     if n-i<ahead-10 then
-    begin
-    getSpecSamples64(rdIndex, n-i);
-    rdIndexInc(n-i);
-    i:=n;
-    end
+      begin
+      getSpecSamples64(rdIndex, n-i);
+      rdIndexInc(n-i);
+      i:=n;
+      end
     else
-    begin
-    getSpecSamples64(rdIndex, ahead-10);
-    rdIndexInc(ahead-10);
-    i:=i+ahead-10;
-    end;
+      begin
+      getSpecSamples64(rdIndex, ahead-10);
+      rdIndexInc(ahead-10);
+      i:=i+ahead-10;
+      end;
     Form1.progresLb.Caption:=intToStr(i)+'/'+intToStr(n);                                         //TdDo: Доделать
   end;
 end;
 
+{it seems that we can just ommite first part with double reading.
+  picoblaze will handle the situation}
 procedure getSpecSamples64(startSample:integer; amountToRead: integer);
 var firstPart, secondPart :Integer;
 begin
   if ((startSample>2047) or (startSample<0) or (amountToRead>2048)) then
   ShowMessage('incorrect input in getspecsamples64');
-  if amountToRead+startSample > ONE_TIME_SAMPLES then
-    begin
-    firstPart:=ONE_TIME_SAMPLES - startSample;
-    secondPart:=amountToRead-firstPart;
-    getDataFromCounter(startSample*8,firstPart*8);
-    myDataDecoder64(firstPart*8);
-    getDataFromCounter(0,secondPart*8);
-    myDataDecoder64(secondPart*8);
-    end
-  else
-    begin
-    getDataFromCounter(startSample*8, amountToRead*8);
-    myDataDecoder64(amountToRead*8);
-    end;
+  getDataFromCounter(startSample*8, amountToRead*8);
+  myDataDecoder64(amountToRead*8);
 end;
 
 procedure getSpecSamples64NoSaving(startSample:integer; amountToRead: integer);
