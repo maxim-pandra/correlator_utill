@@ -305,11 +305,24 @@ end;
   picoblaze will handle the situation}
 procedure getSpecSamples64(startSample:integer; amountToRead: integer);
 var firstPart, secondPart :Integer;
+    frequency : Int64;
+    startTime : Int64;
+    endTime1, endTime2   : Int64;
+    delta1, delta2     : Extended;
 begin
   if ((startSample>2047) or (startSample<0) or (amountToRead>2048)) then
   ShowMessage('incorrect input in getspecsamples64');
+  //getTimestamp here...
+  QueryPerformanceFrequency(frequency);
+  QueryPerformanceCounter(startTime);
   getDataFromCounter(startSample*8, amountToRead*8);
+  //getTimestamp here...
+  QueryPerformanceCounter(endTime1);
+  delta1 := (endTime1 - startTime) / frequency;
   myDataDecoder64(amountToRead*8);
+  //getTimestamp here...          
+  QueryPerformanceCounter(endTime2);
+  delta := (endTime2 - endTime1) / frequency;
 end;
 
 procedure getSpecSamples64NoSaving(startSample:integer; amountToRead: integer);
@@ -780,10 +793,13 @@ begin
   clearBramHard;
   for i:=1 to n do
   begin
+    //getTimestamp here...
     getDataSmart(5000);
+    //getTimestamp here...
     Form1.progressTotalBtn.Caption:=intToStr(i)+'/'+intToStr(n);
     saveSessionToTextFile(i);  //saveSessionToFile(i);
     nextFreeSlot:=0;
+    //getTimestamp here...
   end;
 end;
 

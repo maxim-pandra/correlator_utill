@@ -455,7 +455,6 @@ var q,I,a : integer;
     PicoID : array [0..3] of byte;
 begin
   result:=false;
-  {FT_NodeTree.Items.Clear;  parts of priveous implimentation}
   QueryPerformanceFrequency(TimeoutLimit);    {WINDOWS standart function; TimeoutLimit: int64 это системный высокочастотный таймер
   использовался в прошлых программах, в этой то же в функции pb_ft_data exchange}
   TimeoutLimit:=TimeoutLimit div FTDITimeout;      {еще какая то фигня с таймаутами}
@@ -463,21 +462,14 @@ begin
   GetFTDIDeviceInfo;       {фактически конектимся заново}
   if FTDevFound<=0 then
     exit;
-  {RootNode:=FT_NodeTree.Items.Add(nil,'FTDI devices found');}
-  for q := 0 to FTDevFound - 1 do
+    for q := 0 to FTDevFound - 1 do
     begin
       if TestIfProperFTDevice(q) then
         begin
-          {SomeNode:=FT_NodeTree.Items.AddChildObject(RootNode,FTDevInfo[q].Description+':'+FTDevInfo[q].SerialNumber+' at '+
-                                                 IntToHex(FTDevInfo[q].LocID,4),@FTDevInfo[q]); }
           if ConnectToFTDevice(q) then
           for I := 1 to 15 do
               if TestIfPicoBlazePresent(q,I,PicoID) then
                 begin
-                  {if q>0
-                  then if(FTDevInfo[q].Description=' LAPlatform B') and
-                         (FTDevInfo[q-1].Description=' LAPlatform A') then
-                         ConnectToFTDevice(q-1); }
                   New(P);
                   result:=true;
                   P^.PB_FTNodeIndex:=q;
@@ -488,7 +480,6 @@ begin
                   st:='';
                   st:=st+ByteArrToString(P^.PB_ID,4,0);
                   MyDevNumber:=q;
-                  {FT_NodeTree.Items.AddChildObject(SomeNode,ByteArrToString(PicoID,4,0),P);  }
                 end;
           DevNumber:=q;
           DisconnectFTDevice(q);
@@ -545,9 +536,6 @@ begin
     StrTo:=ByteArrToString(FT_Out_Buffer1,a,0)
   else
     StrTo:=IntToHex(ChannAddr,2)+': '+ByteArrToString(OutputArray,QtyTo,0);
-  {if PB_ThroughCOM then
-    rr:=PB_COMExcange(DevNum,FT_Out_Buffer1,FT_In_Buffer,a,z)
-  else}
     rr:=PB_FTDataExcange(DevNum,FT_Out_Buffer1,FT_In_Buffer,a,z);
     if rr then
     begin
@@ -556,11 +544,6 @@ begin
         begin
           result:=PB_NoReply;
           StrFrom:='No reply';
-//          if PB_ErrorShow and (not PB_LogEnabled) then
-//            begin
-//              Lister.Text:=Lister.Text+'To->'+StrTo+chr($0D)+Chr($0A);
-//              Lister.Text:=Lister.Text+StrFrom+chr($0D)+Chr($0A);
-//            end;
         end
       else
         begin
@@ -579,11 +562,6 @@ begin
                   for q := 0 to z - 1 do
                     InputArray[q]:=FT_In_Buffer[q];
                   StrFrom:='Illegal '+ByteArrToString(FT_In_Buffer,QtyFrom,0);
-//                  if PB_ErrorShow and (not PB_LogEnabled) then
-//                    begin
-//                      Lister.Text:=Lister.Text+'To->'+StrTo+chr($0D)+Chr($0A);
-//                      Lister.Text:=Lister.Text+StrFrom+chr($0D)+Chr($0A);
-//                    end;
                 end;
             end
           else
@@ -593,11 +571,6 @@ begin
                   result:=PB_Illegal;
                   QtyFrom:=z;
                   StrFrom:='Illegal '+ByteArrToString(FT_In_Buffer,QtyFrom,0);
-//                  if PB_ErrorShow and (not PB_LogEnabled) then
-//                    begin
-//                      Lister.Text:=Lister.Text+'To->'+StrTo+chr($0D)+Chr($0A);
-//                      Lister.Text:=Lister.Text+StrFrom+chr($0D)+Chr($0A);
-//                    end;
                 end
               else
                 begin
@@ -614,11 +587,6 @@ begin
     begin
       result:=PB_Failed;
       StrFrom:='Failed';
-//      if PB_ErrorShow and (not PB_LogEnabled) then
-//        begin
-//          Lister.Text:=Lister.Text+'To->'+StrTo+chr($0D)+Chr($0A);
-//          Lister.Text:=Lister.Text+StrFrom+chr($0D)+Chr($0A);
-//        end;
     end;
   if PB_LogEnabled then
     begin
