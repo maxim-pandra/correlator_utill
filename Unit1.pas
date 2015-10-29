@@ -57,7 +57,7 @@ interface
 
 uses
   SysUtils, Types, Classes, Variants, QTypes, QGraphics, QControls, QForms,
-  QDialogs, QStdCtrls;
+  QDialogs, QStdCtrls, Windows;
 
 type
   {объ€вл€ем тип "одно измерение"}
@@ -118,7 +118,8 @@ type
   FileOfCustomBinary = File of TCustomBinary;
 var
   Form1: TForm1;
-   hystReady, connectionFlag:Boolean;
+  hystReady, connectionFlag:Boolean;
+  Buffer: array[0..132000] of Char;
   dataFromC : array [0..DATA_FROM_COUNTER_MAX] of Byte;
   dataToC   : array [0..DATA_TO_COUNTER_MAX]   of Byte;
   answerLength, msgLength, nextFreeSlot : Cardinal;
@@ -280,7 +281,7 @@ begin
   while i<n do
   begin
     wrIndex:=getCurrWrAddrA;
-    if wrIndex>rdIndex then
+    if wrIndex>=rdIndex then
       ahead:=wrIndex-rdIndex
     else
     ahead:=(wrIndex-rdIndex+2047);
@@ -320,9 +321,10 @@ begin
   QueryPerformanceCounter(endTime1);
   delta1 := (endTime1 - startTime) / frequency;
   myDataDecoder64(amountToRead*8);
-  //getTimestamp here...          
+  //getTimestamp here...
   QueryPerformanceCounter(endTime2);
-  delta := (endTime2 - endTime1) / frequency;
+  delta2 := (endTime2 - endTime1) / frequency;
+//  ShowMessage(FloatToStr(delta1)+'   '+FloatToStr(delta2));
 end;
 
 procedure getSpecSamples64NoSaving(startSample:integer; amountToRead: integer);
@@ -588,11 +590,11 @@ begin
   while i<packageSize do //16383 is full memory
     begin
     qElizabeth[j].counter:= dataFromC[i]
-                            +dataFromC[i+1]*pow(1)
-                            +dataFromC[i+2]*pow(2)
-                            +dataFromC[i+3]*pow(3)
-                            +dataFromC[i+4]*pow(4)
-                            +dataFromC[i+5]*pow(5);
+                            +(dataFromC[i+1] * $100)
+                            +(dataFromC[i+2] * $10000)
+                            +(dataFromC[i+3] * $1000000)
+                            +(dataFromC[i+4] * $100000000)
+                            +(dataFromC[i+5] * $10000000000);
     qElizabeth[j].adc:= dataFromC[i+6]+(dataFromC[i+7]and $0f)*256;
     qElizabeth[j].chanel:= dataFromC[i+7] shr 5;
     if (((dataFromC[i+3] shl 3) shr 7)=$01) then
@@ -657,8 +659,8 @@ function getDataFromCounter(initialAddr:Integer = 0; dataBlock:Integer = 16383):
 var    i     : integer;
   CReply   : string;
   begin
-    for i:=0 to DATA_TO_COUNTER_MAX do dataToC[i]:=0;
-    for i:=0 to DATA_FROM_COUNTER_MAX do dataFromC[i]:=0;
+//    for i:=0 to DATA_TO_COUNTER_MAX do dataToC[i]:=0;
+//    for i:=0 to DATA_FROM_COUNTER_MAX do dataFromC[i]:=0;
     CReply:='';
     //создаем строку дл€ отправки: 12.20.00.##.##   (запрос на получени€ пакета длиной ...)
     dataToC[0]:=$12;//$;
@@ -794,7 +796,7 @@ begin
   for i:=1 to n do
   begin
     //getTimestamp here...
-    getDataSmart(5000);
+    getDataSmart(50000);
     //getTimestamp here...
     Form1.progressTotalBtn.Caption:=intToStr(i)+'/'+intToStr(n);
     saveSessionToTextFile(i);  //saveSessionToFile(i);
@@ -843,6 +845,7 @@ begin
   name:=globalFilePrefix+intToStr(sessionNumber);
   AssignFile(f,name);
   Rewrite(f);
+  SetTextBuf(f, Buffer);
   if nextFreeSlot = 0 then
   begin
     ShowMessage(' no raw data');
