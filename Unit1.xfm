@@ -1,8 +1,8 @@
 object Form1: TForm1
   Left = 343
   Top = 86
-  Width = 343
-  Height = 259
+  Width = 323
+  Height = 317
   VertScrollBar.Range = 241
   HorzScrollBar.Range = 305
   ActiveControl = lengthEdt

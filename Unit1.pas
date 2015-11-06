@@ -153,17 +153,18 @@ procedure rdIndexInc64(n: Integer);
 procedure clearAll;
 function setWindowOffset(startCount:Integer; stopCount:Integer): Boolean;
 function setWindowFlag:Boolean;
-function Power(base: Cardinal; power: Cardinal):Cardinal;
-procedure generateAndSaveData( var f : File);                
+procedure generateAndSaveData( var f : File);
 procedure generateAndSaveDataRaw ( var f : TextFile);
 procedure generateAndSaveDataText ( var f : TextFile);
-function pow(power: Integer):int64;
+procedure generateAndSaveHistograms;
+procedure parceHystToFile(var f : TextFile);
 function checkIfRawDataAvailable():Boolean;
 procedure saveSessionToFile(sessionNumber : Integer);
 procedure clearBramSoft;
 procedure clearBramHard;
 procedure tryToLoadCalibration(custom:Boolean);
 procedure saveSessionToTextFile(sessionNumber : Integer);
+procedure saveHystToTextFile;
 function resetMemoryPointers :Boolean;
 
 implementation
@@ -173,14 +174,6 @@ uses
 
 {$R *.xfm}
 
-function Power(base: Cardinal; power: Cardinal):Cardinal;
-var    S , i: Cardinal;
-  begin
-    S:=1;
-    for i:= 1 to Power do
-    S:=S*base;
-    Result:= S;
-  end;
 function setWindowFlag :Boolean;
  var  CReply : string;
   begin
@@ -500,6 +493,13 @@ begin
   end;
 end;
 
+procedure parceHystToFile(var f : TextFile);
+var
+begin
+  for i:= 0 to HYST_MAX do
+    Writeln(f,i,' ',hyst[0,i],' ',hyst[1,i],' ',hyst[2,i]);
+end;
+
 procedure getCalibration(ch:Byte);
 var counter,i, sum, rightBorderHyst, leftBorderHyst,halfWidth  :Integer;
     halfSum  : Double;
@@ -619,16 +619,6 @@ begin
 nextFreeSlot:=j;
 end;
 
-function pow(power: Integer):int64;
-var res :int64;
-    i:integer;
-begin
-  res:=1;
-  for i:= 1 to power do
-  res:=res*256;
-  Result:=res;
-end;
-
 procedure myDataDecoder(packageSize: Integer = 8188);
 var i, j: Integer;
 begin
@@ -648,9 +638,9 @@ while i<(packageSize) do      // 8190 is a package size
 nextFreeSlot:=j;
 end;
 
-// this function should decode data with correct handeling of the first poore  byte. now, i feel a kind of an uncertance about
+// this function should decode data with correct handeling of the first poore  byte. now, i feel a kind of an uncertanty about
 // such approach
-procedure myDataDectoerFull(packageSize: Integer = 8191);
+procedure myDataDecoderFull(packageSize: Integer = 8191);
 var i,j: Integer;
 begin
   i:=0;
@@ -818,6 +808,16 @@ begin
   end;
 end;
 
+procedure generateAndSaveHistograms;
+begin
+  testConnection;
+  clearBramHard;
+  getDataSmart(100000);
+  getHyst;
+  saveHystToTextFile;
+  nextFreeSlot := 0;
+end;
+
 procedure clearBramSoft;
 var ahead: integer;
 begin
@@ -867,7 +867,24 @@ begin
 //  generateAndSaveDataText(f);
   generateAndSaveDataRaw(f);
   CloseFile(f);
+end;
 
+
+procedure saveHystToTextFile;
+var f: TextFile;
+name: String;
+begin
+  name:='histogramms';
+  AssignFile(f,name);
+  Rewrite(f);
+  SetTextBuf(f, Buffer);
+  if nextFreeSlot = 0 then
+  begin
+    ShowMessage(' no raw data');
+    Exit;
+  end;
+  parceHystToFile(f);
+  CloseFile(f);
 end;
 
 function resetMemoryPointers :Boolean;
