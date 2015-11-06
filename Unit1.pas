@@ -154,7 +154,8 @@ procedure clearAll;
 function setWindowOffset(startCount:Integer; stopCount:Integer): Boolean;
 function setWindowFlag:Boolean;
 function Power(base: Cardinal; power: Cardinal):Cardinal;
-procedure generateAndSaveData( var f : File);
+procedure generateAndSaveData( var f : File);                
+procedure generateAndSaveDataRaw ( var f : TextFile);
 procedure generateAndSaveDataText ( var f : TextFile);
 function pow(power: Integer):int64;
 function checkIfRawDataAvailable():Boolean;
@@ -298,7 +299,7 @@ begin
       rdIndexInc(ahead-10);
       i:=i+ahead-10;
       end;
-    Form1.progresLb.Caption:=intToStr(i)+'/'+intToStr(n);                                         //TdDo: Доделать
+      Form1.progresLb.Caption:=intToStr(i)+'/'+intToStr(n);                                         //TdDo: Доделать
   end;
 end;
 
@@ -486,6 +487,18 @@ begin
   end;
 end;
 
+procedure generateAndSaveDataRaw(var f : TextFile);
+var tempBuffer: TCustomBinary;
+    i: Integer;
+    analogTime, totalTime: Double;
+begin
+  i:=0;
+  while i<=nextFreeSlot do
+  begin
+    Writeln(f,qElizabeth[i].chanel,' ',qElizabeth[i].counter,' ',qElizabeth[i].ADC);
+    i:=i+1;
+  end;
+end;
 
 procedure getCalibration(ch:Byte);
 var counter,i, sum, rightBorderHyst, leftBorderHyst,halfWidth  :Integer;
@@ -851,7 +864,8 @@ begin
     ShowMessage(' no raw data');
     Exit;
   end;
-  generateAndSaveDataText(f);
+//  generateAndSaveDataText(f);
+  generateAndSaveDataRaw(f);
   CloseFile(f);
 
 end;
