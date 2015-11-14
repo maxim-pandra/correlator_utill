@@ -281,7 +281,7 @@ begin
     if wrIndex>=rdIndex then
       ahead:=wrIndex-rdIndex
     else
-      ahead:=(wrIndex-rdIndex+2047);
+      ahead:=(wrIndex-rdIndex+2048);//!!!14112015 +2047
 
     if ahead<READ_OFFSET then
       Continue;
@@ -906,8 +906,8 @@ begin
     ShowMessage(' no raw data');
     Exit;
   end;
-//  parceHystToFile(f);
-  generateAndSaveData(f);
+  parceHystToFile(f);
+//  generateAndSaveDataRaw(f);
   CloseFile(f);
 end;
 
