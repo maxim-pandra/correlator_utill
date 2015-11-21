@@ -106,7 +106,7 @@ const
   DATA_TO_COUNTER_MAX = 100;
   READ_OFFSET=110;
   DATA_FROM_COUNTER_MAX = 16400;
-  N_MAX  =1000;
+  N_MAX  =10000;
   HYST_MAX=4096;
   ONE_TIME_SAMPLES = 2048; //we can't change it, its just all memory in BRAM
   CHANEL_AMOUNT = 3;
@@ -131,6 +131,7 @@ var
   HistogramIRF1, histogramIRF2: array [0 .. HYS_IRF_LENGTH] of Integer;
   hyst : array [0..(CHANEL_AMOUNT-1),0..HYST_MAX] of Cardinal;
   hist_digital : array [0..5000] of Cardinal;
+  calbrationIntegral : array [0..4095] of Double;
   rdIndex  :Integer  = 0;
   wrIndex, memOverflowFlag:Integer;
   globalFilePrefix:String;
@@ -168,6 +169,7 @@ procedure clearBramHard;
 procedure tryToLoadCalibration(custom:Boolean);
 procedure saveSessionToTextFile(sessionNumber : Integer);
 procedure saveHystToTextFile;
+procedure tryToLoadCalibrationIntegral(custom:Boolean);
 function resetMemoryPointers :Boolean;
 
 implementation
@@ -281,12 +283,12 @@ begin
     if wrIndex>=rdIndex then
       ahead:=wrIndex-rdIndex
     else
-      ahead:=(wrIndex-rdIndex+2047);
+      ahead:=(wrIndex-rdIndex+2048);//!!!14112015 +2047
 
     if ahead<READ_OFFSET then
       Continue;
 
-    if n-i<ahead-10 then
+    if n-i<ahead then                                        //!-10
       begin
       getSpecSamples64(rdIndex, n-i);
       rdIndexInc(n-i);
@@ -294,9 +296,9 @@ begin
       end
     else
       begin
-      getSpecSamples64(rdIndex, ahead-10);
-      rdIndexInc(ahead-10);
-      i:=i+ahead-10;
+      getSpecSamples64(rdIndex, ahead);                //!-10
+      rdIndexInc(ahead);                         //!-10
+      i:=i+ahead;                                //!-10
       end;
     Form1.progresLb.Caption:=intToStr(i)+'/'+intToStr(n);                                         //TdDo: Доделать
   end;
@@ -486,15 +488,30 @@ begin
   end;
 end;
 
+procedure generateAndSaveDataTextPreciese(var f: TextFile);
+var tempBuffer: TCustomBinary;
+  i : Integer;
+  analogTime, totalTime : Double;
+  begin
+    i:= 0;
+    while i< nextFreeSlot do
+    begin
+      totalTime := 12500.0*qElizabeth[i].counter + calbrationIntegral[qElizabeth[i].adc];
+      Writeln(f,qElizabeth[i].chanel,' ',Round(totalTime));
+    i:=i+1;
+    end;
+  end;
+
 procedure generateAndSaveDataRaw(var f : TextFile);
 var tempBuffer: TCustomBinary;
     i: Integer;
     analogTime, totalTime: Double;
 begin
-  i:=0;
+  i:=1;
   while i<=nextFreeSlot do
   begin
-    Writeln(f,qElizabeth[i].chanel,' ',qElizabeth[i].counter,' ',qElizabeth[i].ADC);
+//    Writeln(f,qElizabeth[i].chanel,' ',qElizabeth[i].counter,' ',qElizabeth[i].ADC);
+    Writeln(f,qElizabeth[i].chanel,' ',qElizabeth[i].counter-qElizabeth[i-1].counter);
     i:=i+1;
   end;
 end;
@@ -711,7 +728,7 @@ end;
 for i:= 0 to DATA_FROM_COUNTER_MAX do dataFromC[i]:=0;
 connectionFlag:=connectToCounter();
 if (not connectionFlag) then ShowMessage('Faild connection to Counter while starting program');
-tryToLoadCalibration(false);
+tryToLoadCalibrationIntegral(false);
 end;
 
 procedure testConnection();
@@ -822,7 +839,7 @@ begin
   for i:=1 to n do
   begin
     //getTimestamp here...
-    getDataSmart(50000);
+    getDataSmart(500000);
     //getTimestamp here...
     Form1.progressTotalBtn.Caption:=intToStr(i)+'/'+intToStr(n);
     saveSessionToTextFile(i);  //saveSessionToFile(i);
@@ -835,7 +852,7 @@ procedure generateAndSaveHistograms;
 begin
   testConnection;
   clearBramHard;
-  getDataSmart(1000000);
+  getDataSmart(10000000);
   getHyst;
   saveHystToTextFile;
   nextFreeSlot := 0;
@@ -887,8 +904,8 @@ begin
     ShowMessage(' no raw data');
     Exit;
   end;
-//  generateAndSaveDataText(f);
-  generateAndSaveDataRaw(f);
+  generateAndSaveDataTextPreciese(f);
+//  generateAndSaveDataRaw(f);
   CloseFile(f);
 end;
 
@@ -906,8 +923,8 @@ begin
     ShowMessage(' no raw data');
     Exit;
   end;
-//  parceHystToFile(f);
-  generateAndSaveData(f);
+  parceHystToFile(f);
+//  generateAndSaveDataRaw(f);
   CloseFile(f);
 end;
 
@@ -963,6 +980,40 @@ begin
 end;
 end;
 
+
+procedure tryToLoadCalibrationIntegral(custom:Boolean);
+var f :textFile;
+i:integer;
+begin
+if (custom = true) then
+begin
+  if (not Form1.OpenDialog.Execute) then Exit;
+  AssignFile(f,Form1.OpenDialog.FileName);
+  reset(f);
+  for i:= 0 to 4095 do
+  begin
+    readln(f,calbrationIntegral[i]);
+  end;
+  close(f);
+end
+else
+begin
+  AssignFile(f,'.\calibrationintegral.cfg');
+  try
+  reset(f);
+  except
+  showMessage('unable to find calibrationintegral.cfg please make sure it is exist');
+  exit;
+  end;
+  for i:= 0 to 4095 do
+  begin
+    readln(f,calbrationIntegral[i]);
+  end;
+  close(f);
+end;
+end;
+
+
 procedure TForm1.loadCalBtnClick(Sender: TObject);
 begin
 tryToLoadCalibration(true);
@@ -992,7 +1043,9 @@ end;
 
 
 procedure TForm1.btnSaveHistClick(Sender: TObject);
+var i : integer;
 begin
+  for i:=1 to 1 do
 generateAndSaveHistograms;
 end;
 
