@@ -131,7 +131,7 @@ var
   HistogramIRF1, histogramIRF2: array [0 .. HYS_IRF_LENGTH] of Integer;
   hyst : array [0..(CHANEL_AMOUNT-1),0..HYST_MAX] of Cardinal;
   hist_digital : array [0..5000] of Cardinal;
-  calbrationIntegral : array [0..4095] of Double;
+  calbrationIntegral : array [0..3, 0..4095] of Double;
   rdIndex  :Integer  = 0;
   wrIndex, memOverflowFlag:Integer;
   globalFilePrefix:String;
@@ -490,14 +490,15 @@ end;
 
 procedure generateAndSaveDataTextPreciese(var f: TextFile);
 var tempBuffer: TCustomBinary;
-  i : Integer;
+  i, currentChannel: Integer;
   analogTime, totalTime : Double;
   begin
     i:= 0;
     while i< nextFreeSlot do
     begin
-      totalTime := 12500.0*qElizabeth[i].counter + calbrationIntegral[qElizabeth[i].adc];
-      Writeln(f,qElizabeth[i].chanel,' ',Round(totalTime));
+      currentChannel := qElizabeth[i].chanel;
+      totalTime := 12500.0*qElizabeth[i].counter + calbrationIntegral[currentChannel, qElizabeth[i].adc];
+      Writeln(f,currentChannel,' ',Round(totalTime));
     i:=i+1;
     end;
   end;
@@ -852,7 +853,7 @@ procedure generateAndSaveHistograms;
 begin
   testConnection;
   clearBramHard;
-  getDataSmart(10000000);
+  getDataSmart(1000000);
   getHyst;
   saveHystToTextFile;
   nextFreeSlot := 0;
@@ -983,16 +984,17 @@ end;
 
 procedure tryToLoadCalibrationIntegral(custom:Boolean);
 var f :textFile;
-i:integer;
+i, j :integer;
 begin
 if (custom = true) then
 begin
   if (not Form1.OpenDialog.Execute) then Exit;
   AssignFile(f,Form1.OpenDialog.FileName);
   reset(f);
+  for j= 0 to 2 do
   for i:= 0 to 4095 do
   begin
-    readln(f,calbrationIntegral[i]);
+    readln(f,calbrationIntegral[j, i]);
   end;
   close(f);
 end
@@ -1005,9 +1007,12 @@ begin
   showMessage('unable to find calibrationintegral.cfg please make sure it is exist');
   exit;
   end;
-  for i:= 0 to 4095 do
+  for j:=0 to 2 do
   begin
-    readln(f,calbrationIntegral[i]);
+    for i:= 0 to 4095 do
+    begin
+      readln(f,calbrationIntegral[j,i]);
+    end;
   end;
   close(f);
 end;
