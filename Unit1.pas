@@ -108,7 +108,7 @@ const
   DATA_FROM_COUNTER_MAX = 16400;
   N_MAX  =10000;
   HYST_MAX=4096;
-  ONE_TIME_SAMPLES = 2048; //we can't change it, its just all memory in BRAM
+  ONE_TIME_SAMPLES = 2048; //we can't change it, its just all memory in BRAM   20 480 000
   CHANEL_AMOUNT = 3;
   HYS_IRF_LENGTH = 1000;
   QELIZABETH_MAX = ONE_TIME_SAMPLES * N_MAX; //(1000) myltiply N_MAX(max amount of packages (DEPRECATED 2047 structures in 1 package)) 2048NOW
@@ -131,7 +131,7 @@ var
   HistogramIRF1, histogramIRF2: array [0 .. HYS_IRF_LENGTH] of Integer;
   hyst : array [0..(CHANEL_AMOUNT-1),0..HYST_MAX] of Cardinal;
   hist_digital : array [0..5000] of Cardinal;
-  calbrationIntegral : array [0..3, 0..4095] of Double;
+  calbrationIntegral : array [0..2, 0..4095] of Double;
   rdIndex  :Integer  = 0;
   wrIndex, memOverflowFlag:Integer;
   globalFilePrefix:String;
@@ -446,24 +446,21 @@ begin
   i:=0;
   while i<=nextFreeSlot do
   begin
-    if (origin[qElizabeth[i].chanel] >= qElizabeth[i].adc)and(originEnd[qElizabeth[i].chanel]<= qElizabeth[i].adc) then
+    currentChannel := qElizabeth[i].chanel;
+    totalTime := 12500*qElizabeth[i].counter + Round(calbrationIntegral[currentChannel, qElizabeth[i].adc]);
+    tempBuffer.bin:=Round(totalTime/81);    // time in bins 81ps now
+    byteBuffer:=tempBuffer.bin mod 256;
+    for  j:=1 to 8 do
     begin
-      analogTime := (origin[qElizabeth[i].chanel]-qElizabeth[i].ADC)*K[qElizabeth[i].chanel]; //got analog time in ns
-      totalTime := 12.5*qElizabeth[i].counter + analogTime;
-      tempBuffer.bin:=Round(totalTime/0.081);    // time in bins 81ps now
-      byteBuffer:=tempBuffer.bin mod 256;
-      for  j:=1 to 8 do
-      begin
-        blockWrite(f,byteBuffer,1);
-        tempBuffer.bin:=tempBuffer.bin div 256;
-        byteBuffer:= tempBuffer.bin mod 256;
-      end;
-      tempBuffer.chanel:=qElizabeth[i].chanel;
-      byteBuffer:=tempBuffer.chanel mod 256;
       blockWrite(f,byteBuffer,1);
-      byteBuffer:=tempBuffer.chanel div 256;
-      blockWrite(f,byteBuffer,1);
+      tempBuffer.bin:=tempBuffer.bin div 256;
+      byteBuffer:= tempBuffer.bin mod 256;
     end;
+    tempBuffer.chanel:=qElizabeth[i].chanel;
+    byteBuffer:=tempBuffer.chanel mod 256;
+    blockWrite(f,byteBuffer,1);
+    byteBuffer:=tempBuffer.chanel div 256;
+    blockWrite(f,byteBuffer,1);
     i:=i+1;
   end;
 end;
@@ -490,15 +487,16 @@ end;
 
 procedure generateAndSaveDataTextPreciese(var f: TextFile);
 var tempBuffer: TCustomBinary;
+totalTime : int64;
   i, currentChannel: Integer;
-  analogTime, totalTime : Double;
+  analogTime : Double;
   begin
     i:= 0;
     while i< nextFreeSlot do
     begin
       currentChannel := qElizabeth[i].chanel;
-      totalTime := 12500.0*qElizabeth[i].counter + calbrationIntegral[currentChannel, qElizabeth[i].adc];
-      Writeln(f,currentChannel,' ',Round(totalTime));
+      totalTime := 12500*qElizabeth[i].counter + Round(calbrationIntegral[currentChannel, qElizabeth[i].adc]);
+      Writeln(f,currentChannel,' ',totalTime);
     i:=i+1;
     end;
   end;
@@ -840,10 +838,11 @@ begin
   for i:=1 to n do
   begin
     //getTimestamp here...
-    getDataSmart(500000);
+    getDataSmart(100000);
     //getTimestamp here...
     Form1.progressTotalBtn.Caption:=intToStr(i)+'/'+intToStr(n);
-    saveSessionToTextFile(i);  //saveSessionToFile(i);
+    //saveSessionToTextFile(i);
+    saveSessionToFile(i);
     nextFreeSlot:=0;
     //getTimestamp here...
   end;
@@ -991,7 +990,7 @@ begin
   if (not Form1.OpenDialog.Execute) then Exit;
   AssignFile(f,Form1.OpenDialog.FileName);
   reset(f);
-  for j= 0 to 2 do
+  for j:= 0 to 2 do
   for i:= 0 to 4095 do
   begin
     readln(f,calbrationIntegral[j, i]);
