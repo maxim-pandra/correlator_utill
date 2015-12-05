@@ -1,9 +1,9 @@
 object Form1: TForm1
   Left = 352
   Top = 137
-  Width = 323
-  Height = 317
-  VertScrollBar.Range = 281
+  Width = 327
+  Height = 360
+  VertScrollBar.Range = 321
   HorzScrollBar.Range = 305
   ActiveControl = lengthEdt
   Caption = 'Form1'
@@ -145,6 +145,15 @@ object Form1: TForm1
     Caption = 'btnSaveHist'
     TabOrder = 15
     OnClick = btnSaveHistClick
+  end
+  object btnConvert: TButton
+    Left = 200
+    Top = 296
+    Width = 105
+    Height = 25
+    Caption = 'btnConvert'
+    TabOrder = 16
+    OnClick = btnConvertClick
   end
   object dlgSaveRawData: TSaveDialog
     FilterIndex = 0

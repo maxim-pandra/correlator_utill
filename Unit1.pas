@@ -86,6 +86,7 @@ type
     bEraseEverything: TButton;
     bWriteFrimware: TButton;
     btnSaveHist: TButton;
+    btnConvert: TButton;
     procedure FormCreate(Sender: TObject);
     procedure btnGetDataFromCounterClick(Sender: TObject);
     procedure GoBtnClick(Sender: TObject);
@@ -95,6 +96,7 @@ type
     procedure bEraseEverythingClick(Sender: TObject);
     procedure bWriteFrimwareClick(Sender: TObject);
     procedure btnSaveHistClick(Sender: TObject);
+    procedure btnConvertClick(Sender: TObject);
   private
     { Private declarations }
   public
@@ -128,6 +130,8 @@ var
   origin, originEnd: array[0..2] of Integer;
   K : array [0..2] of Double;
   qElizabeth : array [0..QELIZABETH_MAX] OF oneSampleInfo;
+  tempChannelArray : array [0..100000] of word;
+  tempInt64Array : array [0..100000] of Int64;
   HistogramIRF1, histogramIRF2: array [0 .. HYS_IRF_LENGTH] of Integer;
   hyst : array [0..(CHANEL_AMOUNT-1),0..HYST_MAX] of Cardinal;
   hist_digital : array [0..5000] of Cardinal;
@@ -154,6 +158,7 @@ procedure getSpecSamples(start_sample:integer; amount_to_read:integer);
 procedure getSpecSamples64(startSample:integer; amountToRead: integer);
 procedure rdIndexInc(n:Integer);
 procedure rdIndexInc64(n: Integer);
+procedure tempConvertor;
 procedure clearAll;
 function setWindowOffset(startCount:Integer; stopCount:Integer): Boolean;
 function setWindowFlag:Boolean;
@@ -440,6 +445,7 @@ var tempBuffer: TCustomBinary;
     counter: Int64;
     chanel: Boolean;
     byteBuffer: Byte;
+    currentChannel :integer;
     i,j: Integer;
     analogTime, totalTime: Double;
 begin
@@ -456,13 +462,66 @@ begin
       tempBuffer.bin:=tempBuffer.bin div 256;
       byteBuffer:= tempBuffer.bin mod 256;
     end;
-    tempBuffer.chanel:=qElizabeth[i].chanel;
+    tempBuffer.chanel:=currentChannel;
     byteBuffer:=tempBuffer.chanel mod 256;
     blockWrite(f,byteBuffer,1);
     byteBuffer:=tempBuffer.chanel div 256;
     blockWrite(f,byteBuffer,1);
     i:=i+1;
   end;
+end;
+
+procedure tempConvertor;
+var f: TextFile;
+g: File;
+i: Integer;
+temp64 :Int64;
+tempChannel,currentChannel : Word;
+tempBuffer: TCustomBinary;
+    byteBuffer: Byte;
+    j: Integer;
+    analogTime, totalTime: Double;
+
+begin
+  nextFreeSlot:=0;
+  AssignFile(f,'.\convertionToBin.in');
+  try
+  reset(f);
+  except
+  showMessage('unable to find convertionToBin.in please make sure it is exist');
+  exit;
+  end;
+  for i:= 1 to 100000 do
+  begin
+    readln(f,tempChannel, temp64);
+    tempInt64Array[i]:=temp64;
+    tempChannelArray[i] := tempChannel;
+  end;
+  close(f);
+  i:=0;
+  AssignFile(g,'binaryData.out');
+  Rewrite(g,1);
+
+  while i<=100000 do
+  begin
+    currentChannel := tempChannelArray[i];
+    totalTime := tempInt64Array[i];
+    tempBuffer.bin:=Round(totalTime/81);    // time in bins 81ps now
+    byteBuffer:=tempBuffer.bin mod 256;
+    for  j:=1 to 8 do
+    begin
+      blockWrite(g,byteBuffer,1);
+      tempBuffer.bin:=tempBuffer.bin div 256;
+      byteBuffer:= tempBuffer.bin mod 256;
+    end;
+    tempBuffer.chanel:=currentChannel;
+    byteBuffer:=tempBuffer.chanel mod 256;
+    blockWrite(g,byteBuffer,1);
+    byteBuffer:=tempBuffer.chanel div 256;
+    blockWrite(g,byteBuffer,1);
+    i:=i+1;
+  end;
+  CloseFile(g);
 end;
 
 procedure generateAndSaveDataText(var f : TextFile);
@@ -495,7 +554,7 @@ totalTime : int64;
     while i< nextFreeSlot do
     begin
       currentChannel := qElizabeth[i].chanel;
-      totalTime := 12500*qElizabeth[i].counter + Round(calbrationIntegral[currentChannel, qElizabeth[i].adc]);
+      totalTime := 12500*qElizabeth[i].counter - Round(calbrationIntegral[currentChannel, qElizabeth[i].adc]);
       Writeln(f,currentChannel,' ',totalTime);
     i:=i+1;
     end;
@@ -506,11 +565,11 @@ var tempBuffer: TCustomBinary;
     i: Integer;
     analogTime, totalTime: Double;
 begin
-  i:=1;
+  i:=0;
   while i<=nextFreeSlot do
   begin
-//    Writeln(f,qElizabeth[i].chanel,' ',qElizabeth[i].counter,' ',qElizabeth[i].ADC);
-    Writeln(f,qElizabeth[i].chanel,' ',qElizabeth[i].counter-qElizabeth[i-1].counter);
+     Writeln(f,qElizabeth[i].chanel,' ',qElizabeth[i].counter,' ',qElizabeth[i].ADC);
+//    Writeln(f,qElizabeth[i].chanel,' ',qElizabeth[i].counter-qElizabeth[i-1].counter);
     i:=i+1;
   end;
 end;
@@ -838,11 +897,11 @@ begin
   for i:=1 to n do
   begin
     //getTimestamp here...
-    getDataSmart(100000);
+    getDataSmart(3000000);
     //getTimestamp here...
     Form1.progressTotalBtn.Caption:=intToStr(i)+'/'+intToStr(n);
-    //saveSessionToTextFile(i);
-    saveSessionToFile(i);
+    saveSessionToTextFile(i);
+    //saveSessionToFile(i);
     nextFreeSlot:=0;
     //getTimestamp here...
   end;
@@ -852,7 +911,7 @@ procedure generateAndSaveHistograms;
 begin
   testConnection;
   clearBramHard;
-  getDataSmart(1000000);
+  getDataSmart(4000000);
   getHyst;
   saveHystToTextFile;
   nextFreeSlot := 0;
@@ -893,19 +952,24 @@ end;
 
 procedure saveSessionToTextFile(sessionNumber : Integer);
 var f: TextFile;
-name: String;
+    g: TextFile;
+    name: String;
 begin
   name:=globalFilePrefix+intToStr(sessionNumber);
   AssignFile(f,name);
   Rewrite(f);
   SetTextBuf(f, Buffer);
+  name:=globalFilePrefix+intToStr(sessionNumber+1);
+  AssignFile(g,name);
+  Rewrite(g);
+  SetTextBuf(g, Buffer);
   if nextFreeSlot = 0 then
   begin
     ShowMessage(' no raw data');
     Exit;
   end;
   generateAndSaveDataTextPreciese(f);
-//  generateAndSaveDataRaw(f);
+  generateAndSaveDataRaw(g);
   CloseFile(f);
 end;
 
@@ -1051,6 +1115,11 @@ var i : integer;
 begin
   for i:=1 to 1 do
 generateAndSaveHistograms;
+end;
+
+procedure TForm1.btnConvertClick(Sender: TObject);
+begin
+tempConvertor;
 end;
 
 end.
