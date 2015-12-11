@@ -123,7 +123,8 @@ type
 var
   Form1: TForm1;
   hystReady, connectionFlag:Boolean;
-  Buffer: array[0..132000] of Char;
+  Buffer: array[0..132000] of Char; 
+  Buffer2: array[0..132000] of Char;
   dataFromC : array [0..DATA_FROM_COUNTER_MAX] of Byte;
   dataToC   : array [0..DATA_TO_COUNTER_MAX]   of Byte;
   answerLength, msgLength, nextFreeSlot : Cardinal;
@@ -897,7 +898,7 @@ begin
   for i:=1 to n do
   begin
     //getTimestamp here...
-    getDataSmart(3000000);
+    getDataSmart(1000000);
     //getTimestamp here...
     Form1.progressTotalBtn.Caption:=intToStr(i)+'/'+intToStr(n);
     saveSessionToTextFile(i);
@@ -911,7 +912,7 @@ procedure generateAndSaveHistograms;
 begin
   testConnection;
   clearBramHard;
-  getDataSmart(4000000);
+  getDataSmart(1000000);
   getHyst;
   saveHystToTextFile;
   nextFreeSlot := 0;
@@ -962,7 +963,7 @@ begin
   name:=globalFilePrefix+intToStr(sessionNumber+1);
   AssignFile(g,name);
   Rewrite(g);
-  SetTextBuf(g, Buffer);
+  SetTextBuf(g, Buffer2);
   if nextFreeSlot = 0 then
   begin
     ShowMessage(' no raw data');
@@ -971,6 +972,7 @@ begin
   generateAndSaveDataTextPreciese(f);
   generateAndSaveDataRaw(g);
   CloseFile(f);
+  CloseFile(g);
 end;
 
 
