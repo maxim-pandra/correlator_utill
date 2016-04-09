@@ -53,3 +53,10 @@
 __history/
 *.~*
 data/
+*.ufp
+02test1
+19999983
+binaryData.out
+convertionToBin.in
+histogramms
+histogramms50k
