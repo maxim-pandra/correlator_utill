@@ -111,7 +111,7 @@ const
   N_MAX  =10000;
   HYST_MAX=4096;
   ONE_TIME_SAMPLES = 2048; //we can't change it, its just all memory in BRAM   20 480 000
-  CHANEL_AMOUNT = 3;
+  CHANEL_AMOUNT = 4;
   HYS_IRF_LENGTH = 1000;
   QELIZABETH_MAX = ONE_TIME_SAMPLES * N_MAX; //(1000) myltiply N_MAX(max amount of packages (DEPRECATED 2047 structures in 1 package)) 2048NOW
 type
@@ -123,20 +123,20 @@ type
 var
   Form1: TForm1;
   hystReady, connectionFlag:Boolean;
-  Buffer: array[0..132000] of Char; 
+  Buffer: array[0..132000] of Char;
   Buffer2: array[0..132000] of Char;
   dataFromC : array [0..DATA_FROM_COUNTER_MAX] of Byte;
   dataToC   : array [0..DATA_TO_COUNTER_MAX]   of Byte;
   answerLength, msgLength, nextFreeSlot : Cardinal;
-  origin, originEnd: array[0..2] of Integer;
-  K : array [0..2] of Double;
+  origin, originEnd: array[0..3] of Integer;
+  K : array [0..3] of Double;
   qElizabeth : array [0..QELIZABETH_MAX] OF oneSampleInfo;
   tempChannelArray : array [0..100000] of word;
   tempInt64Array : array [0..100000] of Int64;
   HistogramIRF1, histogramIRF2: array [0 .. HYS_IRF_LENGTH] of Integer;
   hyst : array [0..(CHANEL_AMOUNT-1),0..HYST_MAX] of Cardinal;
   hist_digital : array [0..5000] of Cardinal;
-  calbrationIntegral : array [0..2, 0..4095] of Double;
+  calbrationIntegral : array [0..3, 0..4095] of Double;
   rdIndex  :Integer  = 0;
   wrIndex, memOverflowFlag:Integer;
   globalFilePrefix:String;
@@ -579,7 +579,7 @@ procedure parceHystToFile(var f : TextFile);
 var i : Integer;
 begin
   for i:= 0 to HYST_MAX do
-    Writeln(f,i,' ',hyst[0,i],' ',hyst[1,i],' ',hyst[2,i],' ',hist_digital[i]);
+    Writeln(f,i,' ',hyst[0,i],' ',hyst[1,i],' ',hyst[2,i],' ',hyst[3,i],' ',hist_digital[i]);
 end;
 
 procedure getCalibration(ch:Byte);
@@ -844,7 +844,9 @@ digital_delay :=1;
   begin;
     if qElizabeth[i].chanel=0 then inc(hyst[0,qElizabeth[i].adc]) else
     if qElizabeth[i].chanel=1 then inc(hyst[1,qElizabeth[i].adc]) else
-    if qElizabeth[i].chanel=2 then inc(hyst[2,qElizabeth[i].adc]);
+    if qElizabeth[i].chanel=2 then inc(hyst[2,qElizabeth[i].adc]) else
+    if qElizabeth[i].chanel=3 then inc(hyst[3,qElizabeth[i].adc]);
+
 
     i:=i+1;
     if (i=1) then
@@ -912,7 +914,7 @@ procedure generateAndSaveHistograms;
 begin
   testConnection;
   clearBramHard;
-  getDataSmart(1000000);
+  getDataSmart(100000);
   getHyst;
   saveHystToTextFile;
   nextFreeSlot := 0;
@@ -960,7 +962,7 @@ begin
   AssignFile(f,name);
   Rewrite(f);
   SetTextBuf(f, Buffer);
-  name:=globalFilePrefix+intToStr(sessionNumber+1);
+  name:=globalFilePrefix+intToStr(sessionNumber)+'raw';
   AssignFile(g,name);
   Rewrite(g);
   SetTextBuf(g, Buffer2);
@@ -989,8 +991,8 @@ begin
     ShowMessage(' no raw data');
     Exit;
   end;
-  parceHystToFile(f);
-//  generateAndSaveDataRaw(f);
+//  parceHystToFile(f);
+  generateAndSaveDataRaw(f);
   CloseFile(f);
 end;
 

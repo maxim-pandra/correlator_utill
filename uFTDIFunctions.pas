@@ -402,7 +402,7 @@ begin
   str:='';
   for I := 0 to 2 do
     str:=str+FTDevInfo[devNum].Description[I];
-  if (str='FT2') then
+  if ((str='FT2') or (str='FT245') or (str='USB <')) then
   begin
     result:=true;
     exit;
